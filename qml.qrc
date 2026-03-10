@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>ui/qml/MainWindow.qml</file>
+        <file>ui/qml/Dashboard.qml</file>
+        <file>ui/qml/Charts.qml</file>
+        <file>ui/qml/ProcessTable.qml</file>
+        <file>ui/qml/StorageMap.qml</file>
+        <file>ui/qml/ChatPanel.qml</file>
+        <file>ui/qml/NavButton.qml</file>
+    </qresource>
+</RCC>
