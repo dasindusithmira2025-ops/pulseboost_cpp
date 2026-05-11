@@ -1,6 +1,9 @@
 #include "PulseBoostAI/core/telemetry_engine.hpp"
 
 #include <QTimer>
+#include <QDebug>
+
+#include <exception>
 
 namespace pulseboost {
 
@@ -40,8 +43,24 @@ SystemSnapshot mergeSnapshot(const SystemSnapshot &base, const SystemSnapshot &d
         merged.drivers = delta.drivers;
     }
 
+    merged.cpuTempC = delta.cpuTempC;
+    merged.gpuTempC = delta.gpuTempC;
+    merged.driveTempC = delta.driveTempC;
+    merged.fanSpeedRpm = delta.fanSpeedRpm;
+    merged.cpuThrottling = delta.cpuThrottling;
+
     merged.issues = delta.issues;
     merged.healthScore = delta.healthScore;
+    merged.cpuEfficiencyScore = delta.cpuEfficiencyScore;
+    merged.memoryPressureScore = delta.memoryPressureScore;
+    merged.diskHealthScore = delta.diskHealthScore;
+    merged.networkQualityScore = delta.networkQualityScore;
+    merged.processHygieneScore = delta.processHygieneScore;
+    merged.thermalStateScore = delta.thermalStateScore;
+    merged.bootPerformanceScore = delta.bootPerformanceScore;
+    merged.systemAgeScore = delta.systemAgeScore;
+    merged.securityScore = delta.securityScore;
+    merged.healthForecast24h = delta.healthForecast24h;
     merged.summary = delta.summary;
     return merged;
 }
@@ -53,58 +72,86 @@ TelemetryWorker::TelemetryWorker(SystemScanner &scanner, QObject *parent)
 
 void TelemetryWorker::start() {
     cpuRamTimer_ = new QTimer(this);
-    diskTimer_   = new QTimer(this);
-    processTimer_= new QTimer(this);
+    diskTimer_ = new QTimer(this);
+    processTimer_ = new QTimer(this);
 
-    connect(cpuRamTimer_,  &QTimer::timeout, this, &TelemetryWorker::onCpuRamTick);
-    connect(diskTimer_,    &QTimer::timeout, this, &TelemetryWorker::onDiskTick);
+    connect(cpuRamTimer_, &QTimer::timeout, this, &TelemetryWorker::onCpuRamTick);
+    connect(diskTimer_, &QTimer::timeout, this, &TelemetryWorker::onDiskTick);
     connect(processTimer_, &QTimer::timeout, this, &TelemetryWorker::onProcessTick);
 
     cpuRamTimer_->start(1000);
     diskTimer_->start(3000);
     processTimer_->start(5000);
 
-    latestSnapshot_ = scanner_.scan();
-    emit snapshotReady(latestSnapshot_);
+    try {
+        latestSnapshot_ = scanner_.scan();
+        emit snapshotReady(latestSnapshot_);
+    } catch (const std::exception &ex) {
+        qWarning() << "[TelemetryWorker] initial scan failed:" << ex.what();
+    } catch (...) {
+        qWarning() << "[TelemetryWorker] initial scan failed with unknown exception";
+    }
 }
 
 void TelemetryWorker::stop() {
-    if (cpuRamTimer_)  cpuRamTimer_->stop();
-    if (diskTimer_)    diskTimer_->stop();
-    if (processTimer_) processTimer_->stop();
+    if (cpuRamTimer_) {
+        cpuRamTimer_->stop();
+    }
+    if (diskTimer_) {
+        diskTimer_->stop();
+    }
+    if (processTimer_) {
+        processTimer_->stop();
+    }
 }
 
 void TelemetryWorker::onCpuRamTick() {
-    auto delta = scanner_.scanVitals();
-    scanner_.finalizeSnapshot(delta);
-    latestSnapshot_ = mergeSnapshot(latestSnapshot_, delta);
-    scanner_.finalizeSnapshot(latestSnapshot_);
-    emit snapshotReady(latestSnapshot_);
+    try {
+        auto delta = scanner_.scanVitals();
+        scanner_.finalizeSnapshot(delta);
+        latestSnapshot_ = mergeSnapshot(latestSnapshot_, delta);
+        scanner_.finalizeSnapshot(latestSnapshot_);
+        emit snapshotReady(latestSnapshot_);
+    } catch (const std::exception &ex) {
+        qWarning() << "[TelemetryWorker] CPU/RAM tick failed:" << ex.what();
+    } catch (...) {
+        qWarning() << "[TelemetryWorker] CPU/RAM tick failed with unknown exception";
+    }
 }
 
 void TelemetryWorker::onDiskTick() {
-    SystemSnapshot delta;
-    scanner_.enrichStorage(delta);
-    scanner_.finalizeSnapshot(delta);
-    latestSnapshot_ = mergeSnapshot(latestSnapshot_, delta);
-    scanner_.finalizeSnapshot(latestSnapshot_);
-    emit snapshotReady(latestSnapshot_);
+    try {
+        SystemSnapshot delta;
+        scanner_.enrichStorage(delta);
+        scanner_.finalizeSnapshot(delta);
+        latestSnapshot_ = mergeSnapshot(latestSnapshot_, delta);
+        scanner_.finalizeSnapshot(latestSnapshot_);
+        emit snapshotReady(latestSnapshot_);
+    } catch (const std::exception &ex) {
+        qWarning() << "[TelemetryWorker] disk tick failed:" << ex.what();
+    } catch (...) {
+        qWarning() << "[TelemetryWorker] disk tick failed with unknown exception";
+    }
 }
 
 void TelemetryWorker::onProcessTick() {
-    SystemSnapshot delta;
-    delta.capturedAt = std::chrono::system_clock::now();
-    delta.heavyProcesses = scanner_.scanVitals().heavyProcesses;
-    scanner_.enrichProcesses(delta);
-    scanner_.finalizeSnapshot(delta);
-    latestSnapshot_ = mergeSnapshot(latestSnapshot_, delta);
-    scanner_.finalizeSnapshot(latestSnapshot_);
-    emit snapshotReady(latestSnapshot_);
+    try {
+        SystemSnapshot delta;
+        delta.capturedAt = std::chrono::system_clock::now();
+        delta.heavyProcesses = scanner_.scanVitals().heavyProcesses;
+        scanner_.enrichProcesses(delta);
+        scanner_.enrichDrivers(delta);
+        scanner_.enrichThermals(delta);
+        scanner_.finalizeSnapshot(delta);
+        latestSnapshot_ = mergeSnapshot(latestSnapshot_, delta);
+        scanner_.finalizeSnapshot(latestSnapshot_);
+        emit snapshotReady(latestSnapshot_);
+    } catch (const std::exception &ex) {
+        qWarning() << "[TelemetryWorker] process tick failed:" << ex.what();
+    } catch (...) {
+        qWarning() << "[TelemetryWorker] process tick failed with unknown exception";
+    }
 }
-
-// ---------------------------------------------------------------------------
-// TelemetryEngine
-// ---------------------------------------------------------------------------
 
 TelemetryEngine::TelemetryEngine(SystemScanner &scanner, QObject *parent)
     : QObject(parent) {
@@ -114,9 +161,8 @@ TelemetryEngine::TelemetryEngine(SystemScanner &scanner, QObject *parent)
     connect(&workerThread_, &QThread::started, worker_, &TelemetryWorker::start);
     connect(&workerThread_, &QThread::finished, worker_, &QObject::deleteLater);
 
-    // Forward signal from worker to this engine (queued across thread boundary)
     connect(worker_, &TelemetryWorker::snapshotReady,
-            this,    &TelemetryEngine::snapshotReady,
+            this, &TelemetryEngine::snapshotReady,
             Qt::QueuedConnection);
 }
 

@@ -6,7 +6,7 @@ PulseBoost AI is a Windows desktop optimizer built with C++20, Win32/WMI telemet
 
 - `core/` gathers telemetry and system state through Win32, PDH, WMI, and the registry.
 - `modules/` contains explicit optimization actions such as cleanup, game mode, and startup analysis.
-- `ai/` turns telemetry plus action history into diagnostic prompts, plans, and LLM requests.
+- `ai/` performs on-device reasoning, diagnostics, planning, and safe action routing.
 - `ui_backend/` and `ui/qml/` provide the presentation layer without letting telemetry work block rendering.
 
 The current application preserves the existing core functionality while moving the UI to a smoother QML shell and keeping telemetry work off the GUI thread.
@@ -48,11 +48,10 @@ The worker emits `snapshotReady(SystemSnapshot)` back to the GUI thread through 
 
 1. The user submits a message from `ChatPanel.qml`.
 2. `AgentEngine::ask()` reads the latest snapshot and history window from `TelemetryCache`.
-3. `ChatRouter` classifies the message and builds a candidate action plan.
-4. `PromptBuilder` formats telemetry, issue summary, process pressure, storage pressure, and plan context.
-5. `LlmClient` sends the request asynchronously to the configured endpoint.
-6. If the endpoint is unavailable, `LlmClient::offlineFallback()` returns a telemetry-based diagnostic response.
-7. For safe action intents such as cleanup or restore-point-backed optimization, `AgentEngine` can execute modules directly before returning the reply.
+3. `AiDiagnosticsEngine::reason()` computes multi-signal risk scores (CPU, RAM, disk, startup, process pressure).
+4. `SystemPrediction` and slope analysis add short-horizon degradation forecasts from telemetry history.
+5. `AgentEngine` maps the generated plan to safe executable actions and runs approved modules.
+6. The final report includes bottlenecks, telemetry evidence, plan steps, forecasts, and execution notes.
 
 ## Main components
 
@@ -85,15 +84,15 @@ Acts as the QML bridge. It exposes:
 
 Coordinates the AI experience. It:
 
-- consumes live telemetry
-- routes commands
-- creates restore points before higher-impact actions
-- triggers safe modules for direct requests
-- builds rich prompts for LLM-backed reasoning
+- consumes live telemetry and history
+- runs an on-device reasoning engine for diagnosis + plan + action selection
+- executes safe actions (`create_restore_point`, `clean_junk`, `analyze_startup`, `enable_game_mode`, `optimize_developer_mode`)
+- records every executed AI action into optimization history
+- emits structured local diagnostics without external model dependency
 
 ### `data/telemetry_cache.*`
 
-Stores recent snapshots in a thread-safe ring buffer. The UI charts and AI prompt builder both read from this cache.
+Stores recent snapshots in a thread-safe ring buffer. The UI charts and local AI reasoning both read from this cache.
 
 ## QML surface
 

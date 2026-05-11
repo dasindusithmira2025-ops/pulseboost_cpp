@@ -15,6 +15,9 @@ enum class ChatIntent {
     Startup,
     StopHeavyProcesses,
     Analyze,
+    NetworkOptimize,
+    RamOptimize,
+    DiskOptimize,
     FreeForm
 };
 

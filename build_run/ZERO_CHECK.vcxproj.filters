@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\build_run\CMakeFiles\5cfee73f4f7c521908c94410e4c44719\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{A4A1196A-FFA8-38D6-8DDF-6E9E72070BDC}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

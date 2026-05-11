@@ -86,7 +86,7 @@ inline std::uint64_t fileTimeToUint64(const FILETIME &value) {
     return integerValue.QuadPart;
 }
 
-inline bool runProcessHidden(const std::wstring &commandLine, DWORD *exitCode = nullptr) {
+inline bool runProcessHidden(const std::wstring &commandLine, DWORD *exitCode = nullptr, DWORD timeoutMs = 60000) {
     STARTUPINFOW startupInfo {};
     PROCESS_INFORMATION processInfo {};
     startupInfo.cb = sizeof(startupInfo);
@@ -107,7 +107,17 @@ inline bool runProcessHidden(const std::wstring &commandLine, DWORD *exitCode = 
         return false;
     }
 
-    WaitForSingleObject(processInfo.hProcess, INFINITE);
+    const DWORD waitResult = WaitForSingleObject(processInfo.hProcess, timeoutMs);
+    if (waitResult == WAIT_TIMEOUT) {
+        TerminateProcess(processInfo.hProcess, 1);
+        if (exitCode != nullptr) {
+            *exitCode = WAIT_TIMEOUT;
+        }
+        CloseHandle(processInfo.hThread);
+        CloseHandle(processInfo.hProcess);
+        return false;
+    }
+
     if (exitCode != nullptr) {
         GetExitCodeProcess(processInfo.hProcess, exitCode);
     }
@@ -118,3 +128,4 @@ inline bool runProcessHidden(const std::wstring &commandLine, DWORD *exitCode = 
 }
 
 }  // namespace pulseboost
+

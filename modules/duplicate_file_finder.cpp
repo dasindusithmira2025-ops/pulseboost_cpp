@@ -1,4 +1,4 @@
-#include "PulseBoostAI/modules/duplicate_file_finder.hpp"
+﻿#include "PulseBoostAI/modules/duplicate_file_finder.hpp"
 
 #include <fstream>
 #include <unordered_map>
@@ -70,6 +70,7 @@ std::vector<DuplicateGroup> DuplicateFileFinder::scan(const std::filesystem::pat
             }
 
             DuplicateGroup group;
+            group.hash = hash;
             group.reclaimableBytes = static_cast<std::uint64_t>((duplicates.size() - 1) * size);
             for (const auto &duplicate : duplicates) {
                 group.files.push_back(FileEntry {.path = duplicate.string(), .bytes = static_cast<std::uint64_t>(size)});

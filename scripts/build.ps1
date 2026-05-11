@@ -1,6 +1,7 @@
 param(
     [string]$Configuration = "Release",
-    [string]$QtPath = $env:CMAKE_PREFIX_PATH
+    [string]$QtPath = $env:CMAKE_PREFIX_PATH,
+    [switch]$DeployRuntime = $true
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,3 +32,31 @@ if (-not $vcvars) {
 
 $command = "`"$vcvars`" && cmake -S . -B build -G `"Visual Studio 17 2022`" -DCMAKE_PREFIX_PATH=`"$QtPath`" && cmake --build build --config $Configuration"
 cmd /c $command
+
+if (-not $DeployRuntime) {
+    return
+}
+
+$qtRoot = $QtPath
+if (-not (Test-Path (Join-Path $qtRoot "bin\windeployqt.exe"))) {
+    $candidate = Split-Path $qtRoot -Parent
+    if (Test-Path (Join-Path $candidate "bin\windeployqt.exe")) {
+        $qtRoot = $candidate
+    }
+}
+
+$windeployqt = Join-Path $qtRoot "bin\windeployqt.exe"
+if (-not (Test-Path $windeployqt)) {
+    Write-Warning "windeployqt.exe not found under '$QtPath'. Skipping runtime deployment."
+    return
+}
+
+$releaseDir = Join-Path "build" $Configuration
+$primaryExe = Join-Path $releaseDir "PulseBoostAI.exe"
+$fallbackExe = Join-Path $releaseDir "PulseBoost.exe"
+$exePath = if (Test-Path $primaryExe) { $primaryExe } else { $fallbackExe }
+if (-not (Test-Path $exePath)) {
+    throw "Build succeeded but executable not found in '$releaseDir'."
+}
+
+& $windeployqt --release --qmldir "ui\qml" $exePath

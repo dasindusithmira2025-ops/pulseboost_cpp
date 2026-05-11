@@ -1,0 +1,3 @@
+module QtGraphicalEffects
+DropShadow 1.15 DropShadow.qml
+RectangularGlow 1.15 RectangularGlow.qml

@@ -19,3 +19,10 @@ logs/
 
 aqtinstall.log
 build_errors.txt
+
+# Tauri + React frontend artifacts
+tauri_ui/node_modules/
+tauri_ui/dist/
+tauri_ui/.vite/
+
+tauri_ui/src-tauri/target/

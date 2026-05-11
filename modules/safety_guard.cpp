@@ -19,10 +19,54 @@ typedef struct _SMGRSTATUS {
 #endif
 
 #include <fstream>
+#include <sstream>
+
+#include <QCryptographicHash>
 
 #include "PulseBoostAI/common/windows_utils.hpp"
 
 namespace pulseboost {
+
+namespace {
+
+std::string sanitizeCsvField(std::string value) {
+    for (char &character : value) {
+        if (character == ',') {
+            character = ';';
+        }
+        if (character == '\n' || character == '\r') {
+            character = ' ';
+        }
+    }
+    return value;
+}
+
+std::string sha256Hex(const std::string &payload) {
+    const QByteArray digest = QCryptographicHash::hash(QByteArray::fromStdString(payload), QCryptographicHash::Sha256);
+    return digest.toHex().toStdString();
+}
+
+std::string readLastHash(const std::string &logPath) {
+    std::ifstream input(logPath);
+    std::string line;
+    std::string last;
+    while (std::getline(input, line)) {
+        if (!line.empty()) {
+            last = line;
+        }
+    }
+    if (last.empty()) {
+        return "GENESIS";
+    }
+
+    const std::size_t lastComma = last.rfind(',');
+    if (lastComma == std::string::npos || lastComma + 1 >= last.size()) {
+        return "GENESIS";
+    }
+    return last.substr(lastComma + 1);
+}
+
+}  // namespace
 
 bool SafetyGuard::createRestorePoint(const std::wstring &description) {
     // Dynamically load SRSetRestorePointW from srclient.dll (ships with Windows)
@@ -55,7 +99,7 @@ bool SafetyGuard::createRestorePoint(const std::wstring &description) {
 
     logAction("safety-guard",
               ok ? "Restore point created: " +
-                       std::string(description.begin(), description.end())
+                       fromWide(description)
                  : "Restore point failed, nStatus=" +
                        std::to_string(smStatus.nStatus),
               ok != FALSE);
@@ -69,14 +113,22 @@ bool SafetyGuard::backupRegistryKey(HKEY root, const std::wstring &subKey, const
     }
     const bool ok = (RegSaveKeyW(key, dstPath.c_str(), nullptr) == ERROR_SUCCESS);
     RegCloseKey(key);
-    logAction("reg-backup", std::string(dstPath.begin(), dstPath.end()), ok);
+    logAction("reg-backup", fromWide(dstPath), ok);
     return ok;
 }
 
 void SafetyGuard::logAction(const std::string &module, const std::string &detail, bool success) {
-    std::ofstream out("logs/safety.log", std::ios::app);
-    out << currentTimestampUtc() << ',' << module << ',' << (success ? "OK" : "FAIL")
-        << ',' << detail << '\n';
+    const std::string path = "logs/safety.log";
+    const std::string timestamp = currentTimestampUtc();
+    const std::string safeModule = sanitizeCsvField(module);
+    const std::string safeDetail = sanitizeCsvField(detail);
+    const std::string status = success ? "OK" : "FAIL";
+    const std::string previousHash = readLastHash(path);
+    const std::string payload = timestamp + "," + safeModule + "," + status + "," + safeDetail + "," + previousHash;
+    const std::string lineHash = sha256Hex(payload);
+
+    std::ofstream out(path, std::ios::app);
+    out << payload << ',' << lineHash << '\n';
 }
 
 }  // namespace pulseboost

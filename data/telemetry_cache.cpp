@@ -45,6 +45,9 @@ QVariantList TelemetryCache::chartSeries(int n) const {
         point["gpu"] = iterator->gpuUsagePercent;
         point["network"] = iterator->networkMbps;
         point["health"] = iterator->healthScore;
+        point["cpuTemp"] = iterator->cpuTempC;
+        point["gpuTemp"] = iterator->gpuTempC;
+        point["driveTemp"] = iterator->driveTempC;
         points.push_back(point);
     }
     return points;

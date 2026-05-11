@@ -1,11 +1,84 @@
 <RCC>
+    <qresource prefix="/fonts">
+        <file>ui/qml/resources/fonts/Rajdhani-Regular.ttf</file>
+        <file>ui/qml/resources/fonts/Rajdhani-Medium.ttf</file>
+        <file>ui/qml/resources/fonts/Rajdhani-SemiBold.ttf</file>
+        <file>ui/qml/resources/fonts/Rajdhani-Bold.ttf</file>
+        <file>ui/qml/resources/fonts/IBMPlexSans-Regular.ttf</file>
+        <file>ui/qml/resources/fonts/IBMPlexSans-Medium.ttf</file>
+        <file>ui/qml/resources/fonts/IBMPlexSans-SemiBold.ttf</file>
+        <file>ui/qml/resources/fonts/IBMPlexMono-Regular.ttf</file>
+        <file>ui/qml/resources/fonts/IBMPlexMono-Medium.ttf</file>
+    </qresource>
+
     <qresource prefix="/">
-        <file>ui/qml/MainWindow.qml</file>
-        <file>ui/qml/Dashboard.qml</file>
-        <file>ui/qml/Charts.qml</file>
-        <file>ui/qml/ProcessTable.qml</file>
-        <file>ui/qml/StorageMap.qml</file>
-        <file>ui/qml/ChatPanel.qml</file>
-        <file>ui/qml/NavButton.qml</file>
+        <file>ui/qml/main.qml</file>
+
+        <file>ui/qml/style/Style.qml</file>
+        <file>ui/qml/style/Typography.qml</file>
+        <file>ui/qml/style/Icons.qml</file>
+        <file>ui/qml/style/Animations.qml</file>
+        <file>ui/qml/style/qmldir</file>
+
+        <file>ui/qml/QtGraphicalEffects/qmldir</file>
+        <file>ui/qml/QtGraphicalEffects/DropShadow.qml</file>
+        <file>ui/qml/QtGraphicalEffects/RectangularGlow.qml</file>
+
+        <file>ui/qml/layout/AppWindow.qml</file>
+        <file>ui/qml/layout/Sidebar.qml</file>
+        <file>ui/qml/layout/TopBar.qml</file>
+        <file>ui/qml/layout/ContentArea.qml</file>
+        <file>ui/qml/layout/StatusBar.qml</file>
+
+        <file>ui/qml/components/controls/GlowButton.qml</file>
+        <file>ui/qml/components/controls/IconButton.qml</file>
+        <file>ui/qml/components/foundation/GlassPanel.qml</file>
+        <file>ui/qml/components/foundation/GlassCard.qml</file>
+        <file>ui/qml/components/foundation/GlassOverlay.qml</file>
+        <file>ui/qml/components/foundation/TrafficLightWindowControls.qml</file>
+        <file>ui/qml/components/foundation/PrimaryInput.qml</file>
+        <file>ui/qml/components/foundation/DataTableRow.qml</file>
+        <file>ui/qml/components/foundation/StatusPill.qml</file>
+        <file>ui/qml/components/foundation/SectionHeader.qml</file>
+
+        <file>ui/qml/components/cards/MetricCard.qml</file>
+        <file>ui/qml/components/cards/HealthRingLarge.qml</file>
+
+        <file>ui/qml/components/charts/LineChart.qml</file>
+        <file>ui/qml/components/charts/SparkLine.qml</file>
+
+        <file>ui/qml/components/feedback/ToastContainer.qml</file>
+        <file>ui/qml/components/feedback/ToastNotification.qml</file>
+        <file>ui/qml/components/feedback/EmptyState.qml</file>
+        <file>ui/qml/components/feedback/ErrorState.qml</file>
+        <file>ui/qml/components/feedback/LoadingState.qml</file>
+
+        <file>ui/qml/components/ai/StreamingText.qml</file>
+        <file>ui/qml/components/ai/ChatBubble.qml</file>
+        <file>ui/qml/components/ai/TypingIndicator.qml</file>
+        <file>ui/qml/components/ai/QuickActionChips.qml</file>
+        <file>ui/qml/components/ai/ContextChip.qml</file>
+
+        <file>ui/qml/screens/Home.qml</file>
+        <file>ui/qml/screens/Optimizations.qml</file>
+        <file>ui/qml/screens/BoostUp.qml</file>
+        <file>ui/qml/screens/Games.qml</file>
+        <file>ui/qml/screens/Backup.qml</file>
+        <file>ui/qml/screens/Tools.qml</file>
+        <file>ui/qml/screens/Dashboard.qml</file>
+        <file>ui/qml/screens/Charts.qml</file>
+        <file>ui/qml/screens/GameMode.qml</file>
+        <file>ui/qml/screens/RamOptimizer.qml</file>
+        <file>ui/qml/screens/Temps.qml</file>
+        <file>ui/qml/screens/ProcessManager.qml</file>
+        <file>ui/qml/screens/StorageAnalyzer.qml</file>
+        <file>ui/qml/screens/AiChat.qml</file>
+        <file>ui/qml/screens/StartupManager.qml</file>
+        <file>ui/qml/screens/DriverManager.qml</file>
+        <file>ui/qml/screens/NetworkMonitor.qml</file>
+        <file>ui/qml/screens/HealthHistory.qml</file>
+        <file>ui/qml/screens/SecurityScanner.qml</file>
+        <file>ui/qml/screens/Settings.qml</file>
+        <file>ui/qml/screens/Onboarding.qml</file>
     </qresource>
 </RCC>

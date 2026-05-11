@@ -3,9 +3,10 @@
 #include <Windows.h>
 
 #include <algorithm>
-#include <array>
 #include <deque>
+#include <string>
 #include <system_error>
+#include <vector>
 
 namespace pulseboost {
 
@@ -75,7 +76,7 @@ DiskSummary DiskAnalyzer::analyzeSystemDrive(std::size_t maxLargeFiles) const {
     const bool shouldDeepScan = cachedCategories_.empty() || (now - lastDeepScan_) > std::chrono::minutes(5);
     if (shouldDeepScan) {
         cachedCategories_ = buildStorageMap(root);
-        cachedLargeFiles_.clear();
+        cachedLargeFiles_ = findLargestFiles(root, maxLargeFiles);
         lastDeepScan_ = now;
     }
 
@@ -85,27 +86,65 @@ DiskSummary DiskAnalyzer::analyzeSystemDrive(std::size_t maxLargeFiles) const {
 }
 
 std::vector<StorageCategory> DiskAnalyzer::buildStorageMap(const std::filesystem::path &root) const {
-    const std::uint64_t windowsBytes = safeDirectorySize(root / "Windows", 3, 25000);
-    const std::uint64_t usersBytes = safeDirectorySize(root / "Users", 4, 25000);
-    const std::uint64_t programFilesBytes = safeDirectorySize(root / "Program Files", 3, 20000) +
-                                            safeDirectorySize(root / "Program Files (x86)", 3, 20000);
-    const std::uint64_t programDataBytes = safeDirectorySize(root / "ProgramData", 3, 20000);
+    std::vector<StorageCategory> measuredCategories;
+    std::error_code error;
 
-    std::uint64_t otherBytes = 0;
-    ULARGE_INTEGER freeBytesAvailable {}, totalBytes {}, freeBytes {};
-    if (GetDiskFreeSpaceExW(root.c_str(), &freeBytesAvailable, &totalBytes, &freeBytes)) {
-        const auto usedBytes = totalBytes.QuadPart - freeBytes.QuadPart;
-        const auto knownBytes = windowsBytes + usersBytes + programFilesBytes + programDataBytes;
-        otherBytes = usedBytes > knownBytes ? usedBytes - knownBytes : 0;
+    for (const auto &entry :
+         std::filesystem::directory_iterator(root, std::filesystem::directory_options::skip_permission_denied, error)) {
+        if (error) {
+            error.clear();
+            continue;
+        }
+        if (!entry.is_directory(error) || entry.is_symlink(error)) {
+            error.clear();
+            continue;
+        }
+
+        auto name = entry.path().filename().string();
+        if (name.empty()) {
+            continue;
+        }
+
+        const std::uint64_t bytes = safeDirectorySize(entry.path(), 3, 22000);
+        if (bytes == 0) {
+            continue;
+        }
+        measuredCategories.push_back(StorageCategory {name, bytes, ""});
     }
 
-    return {
-        StorageCategory {"Users", usersBytes, "#0f62fe"},
-        StorageCategory {"Games / Apps", programFilesBytes, "#20c997"},
-        StorageCategory {"Windows", windowsBytes, "#ff832b"},
-        StorageCategory {"ProgramData", programDataBytes, "#8a3ffc"},
-        StorageCategory {"Other", otherBytes, "#525252"},
-    };
+    std::sort(measuredCategories.begin(),
+              measuredCategories.end(),
+              [](const StorageCategory &left, const StorageCategory &right) { return left.bytes > right.bytes; });
+
+    constexpr std::size_t kMaxVisibleCategories = 6;
+    std::vector<StorageCategory> categories;
+    categories.reserve(kMaxVisibleCategories + 1);
+
+    std::uint64_t knownBytes = 0;
+    for (const auto &category : measuredCategories) {
+        knownBytes += category.bytes;
+    }
+
+    std::uint64_t visibleBytes = 0;
+    for (std::size_t index = 0; index < measuredCategories.size() && index < kMaxVisibleCategories; ++index) {
+        categories.push_back(measuredCategories[index]);
+        visibleBytes += measuredCategories[index].bytes;
+    }
+
+    ULARGE_INTEGER freeBytesAvailable {}, totalBytes {}, freeBytes {};
+    std::uint64_t usedBytes = 0;
+    if (GetDiskFreeSpaceExW(root.c_str(), &freeBytesAvailable, &totalBytes, &freeBytes)) {
+        usedBytes = totalBytes.QuadPart - freeBytes.QuadPart;
+    }
+
+    const std::uint64_t unknownBytes = usedBytes > knownBytes ? usedBytes - knownBytes : 0;
+    const std::uint64_t trimmedBytes = knownBytes > visibleBytes ? knownBytes - visibleBytes : 0;
+    const std::uint64_t otherBytes = unknownBytes + trimmedBytes;
+    if (otherBytes > 0) {
+        categories.push_back(StorageCategory {"Other", otherBytes, ""});
+    }
+
+    return categories;
 }
 
 std::vector<FileEntry> DiskAnalyzer::findLargestFiles(const std::filesystem::path &root, std::size_t limit) const {

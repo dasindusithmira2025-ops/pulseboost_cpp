@@ -1,0 +1,255 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\build_run\PulseBoost_autogen\mocs_compilation_Debug.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\app\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\common\wmi_wrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\system_scanner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\process_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\memory_analyzer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\disk_analyzer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\registry_optimizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\startup_optimizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\service_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\telemetry_engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\auto_updater.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\crash_reporter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\license_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\pulse_bench.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\system_advisor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\game_optimizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\core\backend_daemon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\ai_diagnostics_engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\system_prediction.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\prompt_builder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\chat_router.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\agent_engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\context_builder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\session_memory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\proactive_monitor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\pulse_model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\model\intent_classifier.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\model\context_fusion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\model\response_generator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ai\model\adaptive_engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\junk_cleaner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\duplicate_file_finder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\large_file_scanner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\game_mode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\developer_mode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\network_optimizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\ram_optimizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\defrag_trigger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\startup_optimizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\disk_analyzer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\process_optimizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\service_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\safety_guard.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\modules\tweak_engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ui_backend\ui_controller.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ui_backend\notification_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ui_backend\feature_gate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\ui_backend\ui_preferences.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\data\telemetry_logger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\data\optimization_history.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\data\telemetry_cache.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\build_run\PulseBoost_autogen\EWIEGA46WW\qrc_qml.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\build_run\PulseBoost_autogen\mocs_compilation_Release.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\build_run\PulseBoost_autogen\mocs_compilation_MinSizeRel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\build_run\PulseBoost_autogen\mocs_compilation_RelWithDebInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ai\chat_router.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ai\agent_engine.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ai\proactive_monitor.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ai\pulse_model.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ai\model\intent_classifier.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ai\model\context_fusion.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ai\model\response_generator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ai\model\adaptive_engine.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ui_backend\ui_controller.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ui_backend\notification_manager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ui_backend\feature_gate.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\ui_backend\ui_preferences.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\common\wmi_wrapper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\core\auto_updater.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\core\crash_reporter.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\core\license_manager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\core\pulse_bench.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\core\system_advisor.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\core\game_optimizer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\include\PulseBoostAI\core\backend_daemon.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\build_run\CMakeFiles\006c9cc735d04118d93c0812e23bc70d\qrc_qml.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="D:\HelaDev\Finished And ongoing freelancing Projects\Pulseboost\qml.qrc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{A4A1196A-FFA8-38D6-8DDF-6E9E72070BDC}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{DFC44D53-2813-3CAE-A96E-1205D40B81C9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{0F2F0C23-79A6-328A-96F0-2BE546A9306B}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

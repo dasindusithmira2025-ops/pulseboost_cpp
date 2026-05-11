@@ -44,6 +44,28 @@ std::vector<std::filesystem::path> JunkCleaner::candidateTargets() const {
     return targets;
 }
 
+std::uint64_t JunkCleaner::estimateRecoverableBytes() const {
+    std::uint64_t totalBytes = 0;
+    for (const auto &target : candidateTargets()) {
+        std::error_code error;
+        for (const auto &entry :
+             std::filesystem::directory_iterator(target, std::filesystem::directory_options::skip_permission_denied, error)) {
+            if (error) {
+                error.clear();
+                continue;
+            }
+
+            if (entry.is_regular_file(error)) {
+                totalBytes += entry.file_size(error);
+            } else if (entry.is_directory(error)) {
+                totalBytes += directoryBytes(entry.path());
+            }
+            error.clear();
+        }
+    }
+    return totalBytes;
+}
+
 CleanupResult JunkCleaner::cleanSafeTargets() const {
     CleanupResult result;
     std::error_code error;

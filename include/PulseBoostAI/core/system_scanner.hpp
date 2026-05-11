@@ -4,6 +4,7 @@
 #include <Pdh.h>
 
 #include <chrono>
+#include <mutex>
 
 #include "PulseBoostAI/common/models.hpp"
 #include "PulseBoostAI/core/disk_analyzer.hpp"
@@ -29,6 +30,7 @@ public:
     void enrichProcesses(SystemSnapshot &snapshot);
     void enrichDrivers(SystemSnapshot &snapshot) const;
     void enrichGpuAndNetwork(SystemSnapshot &snapshot) const;
+    void enrichThermals(SystemSnapshot &snapshot) const;
     void finalizeSnapshot(SystemSnapshot &snapshot) const;
 
 private:
@@ -46,6 +48,7 @@ private:
     PDH_HCOUNTER diskWriteCounter_ = nullptr;
     mutable std::uint64_t lastNetworkBytes_ = 0;
     mutable std::chrono::steady_clock::time_point lastNetworkSample_ = std::chrono::steady_clock::now();
+    mutable std::recursive_mutex scanMutex_;
 };
 
 }  // namespace pulseboost

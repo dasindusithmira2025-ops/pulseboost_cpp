@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <string>
+#include <unordered_set>
 
 #include "PulseBoostAI/common/windows_utils.hpp"
 
@@ -36,6 +37,7 @@ bool processCriticalHeuristic(const PROCESSENTRY32W &entry, const std::string &i
 
 std::vector<ProcessInfo> ProcessManager::enumerateProcesses() {
     std::vector<ProcessInfo> processes;
+    std::unordered_set<std::uint32_t> activePids;
 
     HANDLE snapshotHandle = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snapshotHandle == INVALID_HANDLE_VALUE) {
@@ -54,6 +56,8 @@ std::vector<ProcessInfo> ProcessManager::enumerateProcesses() {
     const std::uint64_t currentWallClock = fileTimeToUint64(systemTime);
 
     do {
+        activePids.insert(entry.th32ProcessID);
+
         HANDLE processHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, FALSE, entry.th32ProcessID);
         if (processHandle == nullptr) {
             continue;
@@ -69,15 +73,18 @@ std::vector<ProcessInfo> ProcessManager::enumerateProcesses() {
         }
 
         double cpuPercent = 0.0;
-        const auto iterator = cpuSamples_.find(entry.th32ProcessID);
-        if (iterator != cpuSamples_.end()) {
-            const std::uint64_t processDelta = processTime - iterator->second.processTime;
-            const std::uint64_t wallDelta = currentWallClock - iterator->second.wallClock;
-            if (wallDelta > 0) {
-                cpuPercent = (static_cast<double>(processDelta) / static_cast<double>(wallDelta)) * 100.0;
+        {
+            std::lock_guard<std::mutex> lock(cpuSamplesMutex_);
+            const auto iterator = cpuSamples_.find(entry.th32ProcessID);
+            if (iterator != cpuSamples_.end()) {
+                const std::uint64_t processDelta = processTime - iterator->second.processTime;
+                const std::uint64_t wallDelta = currentWallClock - iterator->second.wallClock;
+                if (wallDelta > 0) {
+                    cpuPercent = (static_cast<double>(processDelta) / static_cast<double>(wallDelta)) * 100.0;
+                }
             }
+            cpuSamples_[entry.th32ProcessID] = CpuSample {.processTime = processTime, .wallClock = currentWallClock};
         }
-        cpuSamples_[entry.th32ProcessID] = CpuSample {.processTime = processTime, .wallClock = currentWallClock};
 
         const std::string imagePath = queryImagePath(processHandle);
         ProcessInfo info;
@@ -92,6 +99,18 @@ std::vector<ProcessInfo> ProcessManager::enumerateProcesses() {
     } while (Process32NextW(snapshotHandle, &entry));
 
     CloseHandle(snapshotHandle);
+
+    // Drop samples for exited processes to keep map bounded.
+    {
+        std::lock_guard<std::mutex> lock(cpuSamplesMutex_);
+        for (auto it = cpuSamples_.begin(); it != cpuSamples_.end();) {
+            if (!activePids.contains(it->first)) {
+                it = cpuSamples_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 
     std::sort(processes.begin(), processes.end(), [](const ProcessInfo &left, const ProcessInfo &right) {
         if (left.cpuPercent == right.cpuPercent) {

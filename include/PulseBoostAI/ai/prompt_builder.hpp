@@ -14,6 +14,9 @@ public:
                                  const std::vector<SystemSnapshot> &history,
                                  const std::vector<OptimizationPlanStep> &plan,
                                  const std::string &userMessage) const;
+    std::string buildDecisionPrompt(const SystemSnapshot &snapshot,
+                                    const std::vector<SystemSnapshot> &history,
+                                    const std::string &userMessage) const;
 };
 
 }  // namespace pulseboost

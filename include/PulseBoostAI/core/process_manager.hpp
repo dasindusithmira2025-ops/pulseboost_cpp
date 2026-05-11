@@ -3,6 +3,7 @@
 #include <Windows.h>
 
 #include <cstdint>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 
@@ -24,6 +25,7 @@ private:
         std::uint64_t wallClock = 0;
     };
 
+    mutable std::mutex cpuSamplesMutex_;
     std::unordered_map<std::uint32_t, CpuSample> cpuSamples_;
 };
 

@@ -29,9 +29,18 @@ ChatIntent ChatRouter::route(const QString &message) const {
     if (lower.contains("stop") || lower.contains("kill") || lower.contains("close background")) {
         return ChatIntent::StopHeavyProcesses;
     }
+    if (lower.contains("ram") || lower.contains("memory optimize") || lower.contains("free memory")) {
+        return ChatIntent::RamOptimize;
+    }
+    if (lower.contains("defrag") || lower.contains("disk optimize") || lower.contains("optimize drive")) {
+        return ChatIntent::DiskOptimize;
+    }
     if (lower.contains("analyze") || lower.contains("scan") ||
         lower.contains("check") || lower.contains("diagnose") || lower.contains("why")) {
         return ChatIntent::Analyze;
+    }
+    if (lower.contains("network") || lower.contains("internet") || lower.contains("ping") || lower.contains("latency")) {
+        return ChatIntent::NetworkOptimize;
     }
 
     return ChatIntent::FreeForm;
@@ -76,6 +85,21 @@ AgentDecision ChatRouter::buildDecision(const QString &message, const SystemSnap
 
     case ChatIntent::StopHeavyProcesses:
         decision.plan.push_back({"Review heavy processes", "Recommend which non-critical processes to close first.", false});
+        break;
+
+    case ChatIntent::NetworkOptimize:
+        decision.plan.push_back({"Optimize Network Settings", "Flush DNS, optimize TCP parameters, and reduce latency.", true});
+        decision.shouldExecutePlan = true;
+        break;
+
+    case ChatIntent::RamOptimize:
+        decision.plan.push_back({"Trim process working sets", "Reduce RAM pressure by trimming non-critical process working sets.", true});
+        decision.shouldExecutePlan = true;
+        break;
+
+    case ChatIntent::DiskOptimize:
+        decision.plan.push_back({"Optimize system drive layout", "Run Windows storage optimization for the system drive.", true});
+        decision.shouldExecutePlan = true;
         break;
 
     case ChatIntent::Analyze:

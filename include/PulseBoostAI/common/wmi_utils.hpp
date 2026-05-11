@@ -121,6 +121,9 @@ inline std::vector<std::unordered_map<std::string, std::string>> WmiSession::que
                 case VT_UI4:
                     row[fromWide(field)] = std::to_string(value.uintVal);
                     break;
+                case VT_BOOL:
+                    row[fromWide(field)] = value.boolVal == VARIANT_TRUE ? std::string("true") : std::string("false");
+                    break;
                 default:
                     break;
                 }

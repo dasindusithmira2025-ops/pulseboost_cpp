@@ -1,0 +1,1 @@
+{"messages":[{"role":"system","content":"You are PulseBoost AI, an expert Windows diagnostics and optimization agent."},{"role":"user","content":"Optimize my PC now"},{"role":"assistant","content":"PLAN\n1. Create restore point\n2. Clean temporary/cache files\n3. Review startup impact\n4. Report outcomes and safety log entries"}]}

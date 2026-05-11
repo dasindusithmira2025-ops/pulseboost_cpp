@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <chrono>
 #include <cstdint>
@@ -13,6 +13,7 @@ struct FileEntry {
 };
 
 struct DuplicateGroup {
+    std::string hash;
     std::vector<FileEntry> files;
     std::uint64_t reclaimableBytes = 0;
 };
@@ -46,12 +47,15 @@ struct DriverInfo {
     std::string deviceName;
     std::string driverVersion;
     std::string provider;
+    std::string driverDate;
+    bool isSigned = true;
+    std::string status;
 };
 
 struct StorageCategory {
     std::string name;
     std::uint64_t bytes = 0;
-    std::string accentColor = "#58a6ff";
+    std::string accentColor;
 };
 
 struct MemorySummary {
@@ -109,9 +113,24 @@ struct SystemSnapshot {
     double diskWriteMbps = 0.0;
     double gpuUsagePercent = 0.0;
     double networkMbps = 0.0;
+    double cpuTempC = 0.0;
+    double gpuTempC = 0.0;
+    double driveTempC = 0.0;
+    double fanSpeedRpm = 0.0;
+    bool cpuThrottling = false;
     int startupPrograms = 0;
     int runningServices = 0;
     int healthScore = 100;
+    int cpuEfficiencyScore = 100;
+    int memoryPressureScore = 100;
+    int diskHealthScore = 100;
+    int networkQualityScore = 100;
+    int processHygieneScore = 100;
+    int thermalStateScore = 100;
+    int bootPerformanceScore = 100;
+    int systemAgeScore = 70;
+    int securityScore = 70;
+    double healthForecast24h = 100.0;
     std::string summary;
     std::vector<std::string> issues;
     std::vector<ProcessInfo> heavyProcesses;

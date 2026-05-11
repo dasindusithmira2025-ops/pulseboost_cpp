@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include <filesystem>
+#include <string>
 #include <vector>
 
 #include "PulseBoostAI/common/models.hpp"
@@ -14,7 +15,9 @@ public:
 
     std::vector<StartupItem> scanStartupItems() const;
     bool disableStartupItem(const StartupItem &item, const std::filesystem::path &backupDirectory) const;
+    bool enableStartupItem(const StartupItem &item) const;
     bool delayStartupItem(const StartupItem &item, int delaySeconds) const;
+    bool scheduleTask(const std::string &taskId, const std::string &type, int intervalHours) const;
 
 private:
     RegistryOptimizer &registryOptimizer_;
