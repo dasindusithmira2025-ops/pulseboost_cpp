@@ -6,6 +6,9 @@
 #include <icmpapi.h>
 
 #include <memory>
+#include <filesystem>
+#include <fstream>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -128,17 +131,65 @@ bool NetworkOptimizer::flushDns() const {
     return runProcessHidden(L"ipconfig /flushdns", &exitCode) && exitCode == 0;
 }
 
-bool NetworkOptimizer::optimizeTcp() const {
+bool NetworkOptimizer::backupNetworkSettings() const {
+    std::filesystem::path root = "data/network_backups";
+    if (const char *appData = std::getenv("APPDATA"); appData != nullptr && *appData != '\0') {
+        root = std::filesystem::path(appData) / "PulseBoostAI" / "network_backups";
+    }
+    std::error_code error;
+    std::filesystem::create_directories(root, error);
+    if (error) {
+        return false;
+    }
+
+    const auto backupPath = root / "latest-network-backup.json";
+    std::ofstream output(backupPath, std::ios::trunc);
+    if (!output.is_open()) {
+        return false;
+    }
+    output << "{"
+           << "\"createdBy\":\"PulseBoostAI\","
+           << "\"note\":\"Use revertNetworkSettings to restore PulseBoost-managed netsh defaults.\","
+           << "\"revertCommands\":["
+           << "\"netsh int tcp set global autotuninglevel=normal\","
+           << "\"netsh int tcp set global rss=default\","
+           << "\"netsh int tcp set global netdma=default\""
+           << "]"
+           << "}\n";
+    return output.good();
+}
+
+bool NetworkOptimizer::optimizeTcp(bool advancedMode) const {
+    if (!advancedMode || !backupNetworkSettings()) {
+        return false;
+    }
+
     DWORD e1 = 1, e2 = 1, e3 = 1;
     const bool ok1 = runProcessHidden(L"netsh int tcp set global autotuninglevel=normal", &e1) && e1 == 0;
     const bool ok2 = runProcessHidden(L"netsh int tcp set global rss=enabled", &e2) && e2 == 0;
-    const bool ok3 = runProcessHidden(L"netsh int tcp set global netdma=enabled", &e3);
+    const bool ok3 = runProcessHidden(L"netsh int tcp set global netdma=enabled", &e3) && e3 == 0;
     return ok1 && ok2 && ok3;
 }
 
-bool NetworkOptimizer::resetAdapter() const {
+bool NetworkOptimizer::resetAdapter(bool advancedMode) const {
+    if (!advancedMode || !backupNetworkSettings()) {
+        return false;
+    }
+
     DWORD exitCode = 1;
     return runProcessHidden(L"netsh winsock reset", &exitCode) && exitCode == 0;
+}
+
+bool NetworkOptimizer::revertNetworkSettings(bool advancedMode) const {
+    if (!advancedMode) {
+        return false;
+    }
+
+    DWORD e1 = 1, e2 = 1, e3 = 1;
+    const bool ok1 = runProcessHidden(L"netsh int tcp set global autotuninglevel=normal", &e1) && e1 == 0;
+    const bool ok2 = runProcessHidden(L"netsh int tcp set global rss=default", &e2) && e2 == 0;
+    const bool ok3 = runProcessHidden(L"netsh int tcp set global netdma=default", &e3) && e3 == 0;
+    return ok1 && ok2 && ok3;
 }
 
 int NetworkOptimizer::measureLatency(const std::string &host) const {

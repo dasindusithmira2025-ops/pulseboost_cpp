@@ -61,6 +61,7 @@
 #include "PulseBoostAI/modules/large_file_scanner.hpp"
 #include "PulseBoostAI/modules/ram_optimizer.hpp"
 #include "PulseBoostAI/modules/safety_guard.hpp"
+#include "PulseBoostAI/modules/safety_policy.hpp"
 #include "PulseBoostAI/modules/network_optimizer.hpp"
 #include "PulseBoostAI/modules/tweak_engine.hpp"
 #include "PulseBoostAI/ui_backend/ui_controller.hpp"
@@ -458,6 +459,7 @@ std::string snapshotToJson(const pulseboost::SystemSnapshot &snapshot) {
     const double netUploadKbps = snapshot.networkMbps * 256.0;
 
     out << "{";
+    out << "\"ok\":true,";
     out << "\"cpuPercent\":" << snapshot.cpuUsagePercent << ",";
     out << "\"ramPercent\":" << snapshot.ramUsagePercent << ",";
     out << "\"ramUsedMb\":" << snapshot.ramUsedMb << ",";
@@ -690,7 +692,7 @@ QJsonObject gameProfileToJson(const pulseboost::GameProfile &profile) {
 
 QJsonArray loadSnapshotRecords() {
     QJsonArray snapshots;
-    const auto directory = std::filesystem::path("data") / "tauri_snapshots";
+    const auto directory = std::filesystem::path("data") / "snapshots";
     std::error_code error;
     if (!std::filesystem::exists(directory, error) || error) {
         return snapshots;
@@ -895,6 +897,86 @@ std::string jsonString(const QJsonObject &object) {
     return QJsonDocument(object).toJson(QJsonDocument::Compact).toStdString();
 }
 
+bool hasCliFlag(int argc, char *argv[], const std::string &flag) {
+    for (int index = 2; index < argc; ++index) {
+        if (argv[index] == flag) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QJsonObject strictResponse(bool ok, const QString &reason = {}) {
+    QJsonObject payload;
+    payload["ok"] = ok;
+    if (!ok && !reason.isEmpty()) {
+        payload["reason"] = reason;
+    }
+    return payload;
+}
+
+bool auditSafety(pulseboost::SafetyPolicy &policy,
+                 const pulseboost::SafetyDecision &decision,
+                 bool dryRun,
+                 bool success,
+                 const std::string &summary,
+                 const QJsonObject &request,
+                 const QJsonObject &result) {
+    if (decision.descriptor.actionId.empty() || !decision.descriptor.auditRequired) {
+        return true;
+    }
+    return policy.audit(pulseboost::SafetyAuditEntry {
+        .actionId = decision.descriptor.actionId,
+        .status = success ? "success" : "failure",
+        .summary = summary,
+        .riskLevel = decision.descriptor.riskLevel,
+        .dryRun = dryRun,
+        .requestJson = request,
+        .resultJson = result,
+    });
+}
+
+QJsonObject evaluateSafety(pulseboost::SafetyPolicy &policy,
+                           const std::string &actionId,
+                           bool dryRun,
+                           bool confirmed,
+                           bool backupCreated,
+                           bool advancedMode,
+                           const std::string &target,
+                           pulseboost::SafetyDecision *decisionOut) {
+    pulseboost::SafetyRequest request;
+    request.actionId = actionId;
+    request.dryRun = dryRun;
+    request.confirmed = confirmed;
+    request.backupCreated = backupCreated;
+    request.advancedMode = advancedMode;
+    request.actor = "cli";
+    request.target = target;
+    request.requestJson = QJsonObject{
+        {"actionId", QString::fromStdString(actionId)},
+        {"dryRun", dryRun},
+        {"confirmed", confirmed},
+        {"backupCreated", backupCreated},
+        {"advancedMode", advancedMode},
+        {"target", QString::fromStdString(target)},
+    };
+
+    const auto decision = policy.evaluate(request);
+    if (decisionOut != nullptr) {
+        *decisionOut = decision;
+    }
+    if (decision.allowed) {
+        return {};
+    }
+
+    QJsonObject payload = strictResponse(false, QString::fromStdString(decision.reason));
+    if (!decision.descriptor.actionId.empty()) {
+        payload["policy"] = policy.descriptorJson(decision.descriptor);
+    }
+    auditSafety(policy, decision, dryRun, false, "Blocked by safety policy", request.requestJson, payload);
+    return payload;
+}
+
 QString maskedLicenseKey(const QString &value) {
     const QString trimmed = value.trimmed();
     if (trimmed.isEmpty()) {
@@ -932,6 +1014,7 @@ int main(int argc, char *argv[]) {
         pulseboost::GameMode gameMode(processManager, serviceManager);
         pulseboost::NetworkOptimizer networkOptimizer;
         pulseboost::SafetyGuard safetyGuard;
+        pulseboost::SafetyPolicy safetyPolicy;
         pulseboost::DefragTrigger defragTrigger;
         pulseboost::TweakEngine tweakEngine(registryOptimizer, serviceManager);
         pulseboost::PulseBench pulseBench;
@@ -973,6 +1056,18 @@ int main(int argc, char *argv[]) {
             return app.exec();
         }
 
+        if (command == "--safety-policy") {
+            QJsonArray actions;
+            for (const auto &descriptor : safetyPolicy.descriptors()) {
+                actions.append(safetyPolicy.descriptorJson(descriptor));
+            }
+            QJsonObject payload;
+            payload["ok"] = true;
+            payload["actions"] = actions;
+            std::cout << jsonString(payload) << '\n';
+            return 0;
+        }
+
         if (command == "--list-tweaks") {
             const auto tweaks = tweakEngine.listTweaks();
             QJsonArray tweakArray;
@@ -993,15 +1088,51 @@ int main(int argc, char *argv[]) {
         }
 
         if (command == "--apply-tweak" && argc > 2) {
-            const auto result = tweakEngine.applyTweak(argv[2]);
-            std::cout << jsonString(tweakActionToJson(result)) << '\n';
-            return result.success ? 0 : 1;
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "tweak.apply", dryRun, hasCliFlag(argc, argv, "--confirm"), true, hasCliFlag(argc, argv, "--advanced"), argv[2], &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
+            QJsonObject payload;
+            bool ok = true;
+            if (dryRun) {
+                payload = strictResponse(true);
+                payload["dryRun"] = true;
+                payload["target"] = QString::fromUtf8(argv[2]);
+            } else {
+                const auto result = tweakEngine.applyTweak(argv[2]);
+                payload = tweakActionToJson(result);
+                ok = result.success;
+            }
+            auditSafety(safetyPolicy, decision, dryRun, ok, "Apply tweak", QJsonObject{{"target", QString::fromUtf8(argv[2])}}, payload);
+            std::cout << jsonString(payload) << '\n';
+            return ok ? 0 : 1;
         }
 
         if (command == "--revert-tweak" && argc > 2) {
-            const auto result = tweakEngine.revertTweak(argv[2]);
-            std::cout << jsonString(tweakActionToJson(result)) << '\n';
-            return result.success ? 0 : 1;
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "tweak.revert", dryRun, hasCliFlag(argc, argv, "--confirm"), true, hasCliFlag(argc, argv, "--advanced"), argv[2], &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
+            QJsonObject payload;
+            bool ok = true;
+            if (dryRun) {
+                payload = strictResponse(true);
+                payload["dryRun"] = true;
+                payload["target"] = QString::fromUtf8(argv[2]);
+            } else {
+                const auto result = tweakEngine.revertTweak(argv[2]);
+                payload = tweakActionToJson(result);
+                ok = result.success;
+            }
+            auditSafety(safetyPolicy, decision, dryRun, ok, "Revert tweak", QJsonObject{{"target", QString::fromUtf8(argv[2])}}, payload);
+            std::cout << jsonString(payload) << '\n';
+            return ok ? 0 : 1;
         }
 
         if (command == "--apply-safe-tweaks") {
@@ -1194,15 +1325,16 @@ int main(int argc, char *argv[]) {
             const auto snapshot = collectSnapshotSafe(scanner);
             telemetryLogger.append(snapshot);
             selfTestLog << "scan," << pulseboost::currentTimestampUtc() << ',' << snapshot.healthScore << '\n';
+            std::cout << "{\"ok\":true,\"healthScore\":" << snapshot.healthScore << "}\n";
             return 0;
         }
 
         if (command == "--status") {
             const auto snapshot = collectSnapshotSafe(scanner);
-            std::cout << "{ \"healthScore\": " << snapshot.healthScore << ", "
-                      << "\"cpuUsage\": " << snapshot.cpuUsagePercent << ", "
-                      << "\"ramUsage\": " << snapshot.ramUsagePercent << ", "
-                      << "\"diskUsage\": " << snapshot.diskUsagePercent << " }\n";
+            std::cout << "{\"ok\":true,\"healthScore\":" << snapshot.healthScore << ","
+                      << "\"cpuUsage\":" << snapshot.cpuUsagePercent << ","
+                      << "\"ramUsage\":" << snapshot.ramUsagePercent << ","
+                      << "\"diskUsage\":" << snapshot.diskUsagePercent << "}\n";
             return 0;
         }
 
@@ -1213,38 +1345,90 @@ int main(int argc, char *argv[]) {
         }
 
         if (command == "--optimize-ram") {
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            const bool advanced = hasCliFlag(argc, argv, "--advanced");
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "ram.trim_working_sets", dryRun, hasCliFlag(argc, argv, "--confirm"), false, advanced, {}, &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
             pulseboost::RamOptimizer optimizer(processManager);
-            const auto result = optimizer.optimizeWorkingSets();
-            const bool ok = result.processesOptimized > 0;
-            std::cout << "{\"ok\":" << (ok ? "true" : "false")
-                      << ",\"optimized\":" << result.processesOptimized
-                      << ",\"skipped\":" << result.processesSkipped << "}\n";
+            const auto result = dryRun ? pulseboost::RamOptimizationResult{0, 0, false, "Dry run: working-set trim would require advanced manual confirmation."}
+                                       : optimizer.optimizeWorkingSets(256.0, advanced);
+            const bool ok = dryRun || result.processesOptimized > 0;
+            QJsonObject payload = strictResponse(ok, ok ? QString() : QStringLiteral("no-processes-trimmed"));
+            payload["dryRun"] = dryRun;
+            payload["advancedOnly"] = true;
+            payload["optimized"] = static_cast<qint64>(result.processesOptimized);
+            payload["skipped"] = static_cast<qint64>(result.processesSkipped);
+            payload["message"] = QString::fromStdString(result.message);
+            auditSafety(safetyPolicy, decision, dryRun, ok, "RAM working-set trim", {}, payload);
+            std::cout << jsonString(payload) << '\n';
             return ok ? 0 : 1;
         }
 
         if (command == "--flush-standby") {
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            const bool advanced = hasCliFlag(argc, argv, "--advanced");
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "ram.flush_standby", dryRun, hasCliFlag(argc, argv, "--confirm"), false, advanced, {}, &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
             pulseboost::RamOptimizer optimizer(processManager);
-            const auto result = optimizer.flushStandbyList();
-            const bool ok = result.processesOptimized > 0;
-            std::cout << "{\"ok\":" << (ok ? "true" : "false")
-                      << ",\"optimized\":" << result.processesOptimized
-                      << ",\"skipped\":" << result.processesSkipped << "}\n";
+            const auto result = dryRun ? pulseboost::RamOptimizationResult{0, 0, false, "Dry run: standby relief would require advanced manual confirmation."}
+                                       : optimizer.flushStandbyList(advanced);
+            const bool ok = dryRun || result.processesOptimized > 0;
+            QJsonObject payload = strictResponse(ok, ok ? QString() : QStringLiteral("no-processes-trimmed"));
+            payload["dryRun"] = dryRun;
+            payload["advancedOnly"] = true;
+            payload["optimized"] = static_cast<qint64>(result.processesOptimized);
+            payload["skipped"] = static_cast<qint64>(result.processesSkipped);
+            payload["message"] = QString::fromStdString(result.message);
+            auditSafety(safetyPolicy, decision, dryRun, ok, "RAM standby relief", {}, payload);
+            std::cout << jsonString(payload) << '\n';
             return ok ? 0 : 1;
         }
 
         if (command == "--enable-ram-saver") {
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            const bool advanced = hasCliFlag(argc, argv, "--advanced");
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "ram.saver", dryRun, hasCliFlag(argc, argv, "--confirm"), false, advanced, {}, &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
             pulseboost::RamOptimizer optimizer(processManager);
-            const auto result = optimizer.enableRamSaverMode();
-            const bool ok = result.processesOptimized > 0;
-            std::cout << "{\"ok\":" << (ok ? "true" : "false")
-                      << ",\"optimized\":" << result.processesOptimized
-                      << ",\"skipped\":" << result.processesSkipped << "}\n";
+            const auto result = dryRun ? pulseboost::RamOptimizationResult{0, 0, false, "Dry run: RAM saver would require advanced manual confirmation."}
+                                       : optimizer.enableRamSaverMode(advanced);
+            const bool ok = dryRun || result.processesOptimized > 0;
+            QJsonObject payload = strictResponse(ok, ok ? QString() : QStringLiteral("no-processes-trimmed"));
+            payload["dryRun"] = dryRun;
+            payload["advancedOnly"] = true;
+            payload["optimized"] = static_cast<qint64>(result.processesOptimized);
+            payload["skipped"] = static_cast<qint64>(result.processesSkipped);
+            payload["message"] = QString::fromStdString(result.message);
+            auditSafety(safetyPolicy, decision, dryRun, ok, "RAM saver", {}, payload);
+            std::cout << jsonString(payload) << '\n';
             return ok ? 0 : 1;
         }
 
         if (command == "--optimize-disk") {
-            const bool ok = defragTrigger.optimizeSystemDrive();
-            std::cout << "{\"ok\":" << (ok ? "true" : "false") << "}\n";
+            pulseboost::SafetyDecision decision;
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            const auto blocked = evaluateSafety(safetyPolicy, "disk.optimize", dryRun, hasCliFlag(argc, argv, "--confirm"), false, hasCliFlag(argc, argv, "--advanced"), {}, &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
+            const bool ok = dryRun || defragTrigger.optimizeSystemDrive();
+            QJsonObject payload = strictResponse(dryRun || ok, ok || dryRun ? QString() : QStringLiteral("disk-optimizer-failed"));
+            payload["dryRun"] = dryRun;
+            auditSafety(safetyPolicy, decision, dryRun, dryRun || ok, "Disk optimize", {}, payload);
+            std::cout << jsonString(payload) << "\n";
             return ok ? 0 : 1;
         }
 
@@ -1255,14 +1439,46 @@ int main(int argc, char *argv[]) {
         }
 
         if (command == "--optimize-tcp") {
-            const bool ok = networkOptimizer.optimizeTcp();
-            std::cout << "{\"ok\":" << (ok ? "true" : "false") << "}\n";
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            const bool advanced = hasCliFlag(argc, argv, "--advanced");
+            const bool backupCreated = dryRun || networkOptimizer.backupNetworkSettings();
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "network.optimize_tcp", dryRun, hasCliFlag(argc, argv, "--confirm"), backupCreated, advanced, {}, &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
+            const bool ok = dryRun || networkOptimizer.optimizeTcp(advanced);
+            QJsonObject payload = strictResponse(ok, ok ? QString() : QStringLiteral("netsh-failed"));
+            payload["dryRun"] = dryRun;
+            payload["advancedOnly"] = true;
+            payload["backupCreated"] = backupCreated;
+            auditSafety(safetyPolicy, decision, dryRun, ok, "Network TCP tune", {}, payload);
+            std::cout << jsonString(payload) << "\n";
+            return ok ? 0 : 1;
+        }
+
+        if (command == "--revert-network") {
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            const bool advanced = hasCliFlag(argc, argv, "--advanced");
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "network.revert", dryRun, hasCliFlag(argc, argv, "--confirm"), true, advanced, {}, &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
+            const bool ok = dryRun || networkOptimizer.revertNetworkSettings(advanced);
+            QJsonObject payload = strictResponse(ok, ok ? QString() : QStringLiteral("network-revert-failed"));
+            payload["dryRun"] = dryRun;
+            payload["advancedOnly"] = true;
+            auditSafety(safetyPolicy, decision, dryRun, ok, "Network revert", {}, payload);
+            std::cout << jsonString(payload) << "\n";
             return ok ? 0 : 1;
         }
 
         if (command == "--check-latency") {
             const int latency = networkOptimizer.measureLatency();
-            std::cout << "{\"latency\":" << latency << "}\n";
+            std::cout << "{\"ok\":" << (latency >= 0 ? "true" : "false") << ",\"latency\":" << latency << "}\n";
             return latency >= 0 ? 0 : 1;
         }
 
@@ -1294,13 +1510,22 @@ int main(int argc, char *argv[]) {
                 std::cout << "{\"ok\":false,\"reason\":\"invalid-path\"}\n";
                 return 1;
             }
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "file.delete", dryRun, hasCliFlag(argc, argv, "--confirm"), false, hasCliFlag(argc, argv, "--advanced"), path->string(), &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
             std::error_code sizeError;
             const auto bytes = std::filesystem::file_size(*path, sizeError);
             std::error_code removeError;
-            const bool ok = std::filesystem::remove(*path, removeError);
-            std::cout << "{\"ok\":" << (ok ? "true" : "false")
-                      << ",\"bytes\":" << (sizeError ? 0 : bytes)
-                      << "}\n";
+            const bool ok = dryRun || std::filesystem::remove(*path, removeError);
+            QJsonObject payload = strictResponse(ok, ok ? QString() : QStringLiteral("delete-failed"));
+            payload["dryRun"] = dryRun;
+            payload["bytes"] = static_cast<qint64>(sizeError ? 0 : bytes);
+            auditSafety(safetyPolicy, decision, dryRun, ok, "Delete file", QJsonObject{{"path", QString::fromStdString(path->string())}}, payload);
+            std::cout << jsonString(payload) << "\n";
             return ok ? 0 : 1;
         }
 
@@ -1310,6 +1535,12 @@ int main(int argc, char *argv[]) {
                 std::cout << "{\"ok\":false,\"reason\":\"critical-process\"}\n";
                 return 0;
             }
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "process.kill", false, hasCliFlag(argc, argv, "--confirm"), false, hasCliFlag(argc, argv, "--advanced"), std::to_string(pid), &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
 
             HANDLE processHandle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
             bool success = false;
@@ -1317,7 +1548,10 @@ int main(int argc, char *argv[]) {
                 success = TerminateProcess(processHandle, 1) == TRUE;
                 CloseHandle(processHandle);
             }
-            std::cout << "{\"ok\":" << (success ? "true" : "false") << "}\n";
+            QJsonObject payload = strictResponse(success, success ? QString() : QStringLiteral("terminate-failed"));
+            payload["pid"] = static_cast<int>(pid);
+            auditSafety(safetyPolicy, decision, false, success, "Kill process", QJsonObject{{"pid", static_cast<int>(pid)}}, payload);
+            std::cout << jsonString(payload) << "\n";
             return success ? 0 : 1;
         }
 
@@ -1329,8 +1563,16 @@ int main(int argc, char *argv[]) {
         }
 
         if (command == "--create-restore-point") {
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "restore.create", false, true, false, false, {}, &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
             const bool ok = safetyGuard.createRestorePoint(L"PulseBoost AI - CLI Restore Point");
-            std::cout << "{\"ok\":" << (ok ? "true" : "false") << "}\n";
+            QJsonObject payload = strictResponse(ok, ok ? QString() : QStringLiteral("restore-point-failed"));
+            auditSafety(safetyPolicy, decision, false, ok, "Create restore point", {}, payload);
+            std::cout << jsonString(payload) << "\n";
             return ok ? 0 : 1;
         }
 
@@ -1348,10 +1590,10 @@ int main(int argc, char *argv[]) {
             }
             const bool ok = gameMode.enableForProcess(candidate->pid);
             QSettings settings(QStringLiteral("PulseBoost"), QStringLiteral("PulseBoost AI"));
-            settings.setValue(QStringLiteral("TauriUi/gameModeActive"), ok);
-            settings.setValue(QStringLiteral("TauriUi/gameModeTargetPid"), static_cast<int>(candidate->pid));
-            settings.setValue(QStringLiteral("TauriUi/gameModeTargetName"), QString::fromStdString(candidate->name));
-            settings.setValue(QStringLiteral("TauriUi/gameModeTargetExecutable"), QString::fromStdString(candidate->name));
+            settings.setValue(QStringLiteral("QtUi/gameModeActive"), ok);
+            settings.setValue(QStringLiteral("QtUi/gameModeTargetPid"), static_cast<int>(candidate->pid));
+            settings.setValue(QStringLiteral("QtUi/gameModeTargetName"), QString::fromStdString(candidate->name));
+            settings.setValue(QStringLiteral("QtUi/gameModeTargetExecutable"), QString::fromStdString(candidate->name));
             settings.sync();
             std::cout << "{\"ok\":" << (ok ? "true" : "false")
                       << ",\"pid\":" << candidate->pid
@@ -1372,10 +1614,10 @@ int main(int argc, char *argv[]) {
             }
             const bool ok = gameMode.enableForProcess(*pid);
             QSettings settings(QStringLiteral("PulseBoost"), QStringLiteral("PulseBoost AI"));
-            settings.setValue(QStringLiteral("TauriUi/gameModeActive"), ok);
-            settings.setValue(QStringLiteral("TauriUi/gameModeTargetPid"), static_cast<int>(*pid));
-            settings.setValue(QStringLiteral("TauriUi/gameModeTargetName"), QString::fromStdString(profile->displayName));
-            settings.setValue(QStringLiteral("TauriUi/gameModeTargetExecutable"), QString::fromStdString(profile->executableName));
+            settings.setValue(QStringLiteral("QtUi/gameModeActive"), ok);
+            settings.setValue(QStringLiteral("QtUi/gameModeTargetPid"), static_cast<int>(*pid));
+            settings.setValue(QStringLiteral("QtUi/gameModeTargetName"), QString::fromStdString(profile->displayName));
+            settings.setValue(QStringLiteral("QtUi/gameModeTargetExecutable"), QString::fromStdString(profile->executableName));
             settings.sync();
             std::cout << "{\"ok\":" << (ok ? "true" : "false")
                       << ",\"pid\":" << *pid
@@ -1413,10 +1655,10 @@ int main(int argc, char *argv[]) {
             }
 
             QSettings settings(QStringLiteral("PulseBoost"), QStringLiteral("PulseBoost AI"));
-            settings.setValue(QStringLiteral("TauriUi/gameModeActive"), ok && pid.has_value());
-            settings.setValue(QStringLiteral("TauriUi/gameModeTargetPid"), static_cast<int>(pid.value_or(0)));
-            settings.setValue(QStringLiteral("TauriUi/gameModeTargetName"), QString::fromStdString(profile->displayName));
-            settings.setValue(QStringLiteral("TauriUi/gameModeTargetExecutable"), QString::fromStdString(profile->executableName));
+            settings.setValue(QStringLiteral("QtUi/gameModeActive"), ok && pid.has_value());
+            settings.setValue(QStringLiteral("QtUi/gameModeTargetPid"), static_cast<int>(pid.value_or(0)));
+            settings.setValue(QStringLiteral("QtUi/gameModeTargetName"), QString::fromStdString(profile->displayName));
+            settings.setValue(QStringLiteral("QtUi/gameModeTargetExecutable"), QString::fromStdString(profile->executableName));
             settings.sync();
 
             std::cout << "{\"ok\":" << (ok ? "true" : "false")
@@ -1431,10 +1673,10 @@ int main(int argc, char *argv[]) {
         if (command == "--disable-game-mode" || command == "--revert-game-optimization") {
             gameMode.disable();
             QSettings settings(QStringLiteral("PulseBoost"), QStringLiteral("PulseBoost AI"));
-            settings.setValue(QStringLiteral("TauriUi/gameModeActive"), false);
-            settings.remove(QStringLiteral("TauriUi/gameModeTargetPid"));
-            settings.remove(QStringLiteral("TauriUi/gameModeTargetName"));
-            settings.remove(QStringLiteral("TauriUi/gameModeTargetExecutable"));
+            settings.setValue(QStringLiteral("QtUi/gameModeActive"), false);
+            settings.remove(QStringLiteral("QtUi/gameModeTargetPid"));
+            settings.remove(QStringLiteral("QtUi/gameModeTargetName"));
+            settings.remove(QStringLiteral("QtUi/gameModeTargetExecutable"));
             settings.sync();
             std::cout << "{\"ok\":true}\n";
             return 0;
@@ -1442,17 +1684,17 @@ int main(int argc, char *argv[]) {
 
         if (command == "--game-mode-status") {
             QSettings settings(QStringLiteral("PulseBoost"), QStringLiteral("PulseBoost AI"));
-            bool active = settings.value(QStringLiteral("TauriUi/gameModeActive"), false).toBool();
-            int pid = settings.value(QStringLiteral("TauriUi/gameModeTargetPid"), 0).toInt();
-            const auto name = settings.value(QStringLiteral("TauriUi/gameModeTargetName"), QString()).toString().toStdString();
-            const auto executable = settings.value(QStringLiteral("TauriUi/gameModeTargetExecutable"), QString()).toString().toStdString();
+            bool active = settings.value(QStringLiteral("QtUi/gameModeActive"), false).toBool();
+            int pid = settings.value(QStringLiteral("QtUi/gameModeTargetPid"), 0).toInt();
+            const auto name = settings.value(QStringLiteral("QtUi/gameModeTargetName"), QString()).toString().toStdString();
+            const auto executable = settings.value(QStringLiteral("QtUi/gameModeTargetExecutable"), QString()).toString().toStdString();
             if (active && pid > 0) {
                 const auto livePid = gameOptimizer.runningPidForExecutable(executable.empty() ? name : executable);
                 if (!livePid.has_value()) {
                     active = false;
                     pid = 0;
-                    settings.setValue(QStringLiteral("TauriUi/gameModeActive"), false);
-                    settings.remove(QStringLiteral("TauriUi/gameModeTargetPid"));
+                    settings.setValue(QStringLiteral("QtUi/gameModeActive"), false);
+                    settings.remove(QStringLiteral("QtUi/gameModeTargetPid"));
                     settings.sync();
                 } else {
                     pid = static_cast<int>(*livePid);
@@ -1472,11 +1714,22 @@ int main(int argc, char *argv[]) {
                 std::cout << "{\"ok\":false,\"reason\":\"not-found\"}\n";
                 return 1;
             }
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
             const auto backupDir = std::filesystem::path("logs/startup_backups");
             std::error_code ec;
             std::filesystem::create_directories(backupDir, ec);
-            const bool ok = startupOptimizer.disableStartupItem(*item, backupDir);
-            std::cout << "{\"ok\":" << (ok ? "true" : "false") << "}\n";
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "startup.disable", dryRun, hasCliFlag(argc, argv, "--confirm"), !ec, hasCliFlag(argc, argv, "--advanced"), item->name, &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
+            const bool ok = dryRun || startupOptimizer.disableStartupItem(*item, backupDir);
+            QJsonObject payload = strictResponse(ok, ok ? QString() : QStringLiteral("startup-disable-failed"));
+            payload["dryRun"] = dryRun;
+            payload["name"] = QString::fromStdString(item->name);
+            auditSafety(safetyPolicy, decision, dryRun, ok, "Disable startup item", QJsonObject{{"name", QString::fromStdString(item->name)}}, payload);
+            std::cout << jsonString(payload) << "\n";
             return ok ? 0 : 1;
         }
 
@@ -1487,8 +1740,19 @@ int main(int argc, char *argv[]) {
                 std::cout << "{\"ok\":false,\"reason\":\"not-found\"}\n";
                 return 1;
             }
-            const bool ok = startupOptimizer.enableStartupItem(*item);
-            std::cout << "{\"ok\":" << (ok ? "true" : "false") << "}\n";
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "startup.enable", dryRun, hasCliFlag(argc, argv, "--confirm"), false, hasCliFlag(argc, argv, "--advanced"), item->name, &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
+            const bool ok = dryRun || startupOptimizer.enableStartupItem(*item);
+            QJsonObject payload = strictResponse(ok, ok ? QString() : QStringLiteral("startup-enable-failed"));
+            payload["dryRun"] = dryRun;
+            payload["name"] = QString::fromStdString(item->name);
+            auditSafety(safetyPolicy, decision, dryRun, ok, "Enable startup item", QJsonObject{{"name", QString::fromStdString(item->name)}}, payload);
+            std::cout << jsonString(payload) << "\n";
             return ok ? 0 : 1;
         }
 
@@ -1500,8 +1764,20 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             const int delaySeconds = std::max(1, std::atoi(argv[3]));
-            const bool ok = startupOptimizer.delayStartupItem(*item, delaySeconds);
-            std::cout << "{\"ok\":" << (ok ? "true" : "false") << "}\n";
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy, "startup.delay", dryRun, hasCliFlag(argc, argv, "--confirm"), false, hasCliFlag(argc, argv, "--advanced"), item->name, &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
+            const bool ok = dryRun || startupOptimizer.delayStartupItem(*item, delaySeconds);
+            QJsonObject payload = strictResponse(ok, ok ? QString() : QStringLiteral("startup-delay-failed"));
+            payload["dryRun"] = dryRun;
+            payload["name"] = QString::fromStdString(item->name);
+            payload["delaySeconds"] = delaySeconds;
+            auditSafety(safetyPolicy, decision, dryRun, ok, "Delay startup item", QJsonObject{{"name", QString::fromStdString(item->name)}, {"delaySeconds", delaySeconds}}, payload);
+            std::cout << jsonString(payload) << "\n";
             return ok ? 0 : 1;
         }
 
@@ -1566,7 +1842,7 @@ int main(int argc, char *argv[]) {
         }
         if (command == "--take-snapshot") {
             const auto snapshot = collectSnapshotSafe(scanner);
-            const auto baseDir = std::filesystem::path("data/tauri_snapshots");
+            const auto baseDir = std::filesystem::path("data/snapshots");
             std::error_code ec;
             std::filesystem::create_directories(baseDir, ec);
             std::string safeTimestamp = pulseboost::currentTimestampUtc();
@@ -1589,7 +1865,7 @@ int main(int argc, char *argv[]) {
             std::filesystem::path snapshotPath = argv[2];
             std::error_code error;
             if (!std::filesystem::exists(snapshotPath, error) || error) {
-                snapshotPath = std::filesystem::path("data/tauri_snapshots") / argv[2];
+                snapshotPath = std::filesystem::path("data/snapshots") / argv[2];
             }
             const QJsonObject payload = restoreSnapshotFromFile(snapshotPath, startupOptimizer, safetyGuard, optimizationHistory);
             std::cout << jsonString(payload) << '\n';
@@ -1669,15 +1945,48 @@ int main(int argc, char *argv[]) {
         }
 
         if (command == "--clean") {
-            const auto result = junkCleaner.cleanSafeTargets();
+            const bool dryRun = hasCliFlag(argc, argv, "--dry-run");
+            pulseboost::CleanupOptions options;
+            options.dryRun = dryRun;
+            options.mode = hasCliFlag(argc, argv, "--recycle")
+                ? pulseboost::CleanupMode::Recycle
+                : (hasCliFlag(argc, argv, "--permanent-delete") ? pulseboost::CleanupMode::PermanentDelete : pulseboost::CleanupMode::Quarantine);
+            const bool permanentDelete = options.mode == pulseboost::CleanupMode::PermanentDelete;
+            pulseboost::SafetyDecision decision;
+            const auto blocked = evaluateSafety(safetyPolicy,
+                                                permanentDelete ? "junk.clean.permanent" : "junk.clean",
+                                                dryRun,
+                                                hasCliFlag(argc, argv, "--confirm"),
+                                                !permanentDelete,
+                                                hasCliFlag(argc, argv, "--advanced"),
+                                                {},
+                                                &decision);
+            if (!blocked.isEmpty()) {
+                std::cout << jsonString(blocked) << '\n';
+                return 1;
+            }
+
+            const auto result = junkCleaner.cleanSafeTargets(options);
+            const bool ok = result.failures == 0;
             optimizationHistory.record(pulseboost::ActionRecord {
                 .timestampUtc = pulseboost::currentTimestampUtc(),
                 .action = "cli-clean",
                 .details = "Recovered " + std::to_string(result.bytesRecovered) + " bytes",
-                .success = true,
+                .success = ok,
             });
             selfTestLog << "clean," << pulseboost::currentTimestampUtc() << ',' << result.filesRemoved << '\n';
-            return 0;
+            QJsonObject payload = strictResponse(ok, ok ? QString() : QStringLiteral("cleanup-partial-failure"));
+            payload["dryRun"] = result.dryRun;
+            payload["bytesRecovered"] = static_cast<qint64>(result.bytesRecovered);
+            payload["filesScanned"] = result.filesScanned;
+            payload["filesRemoved"] = result.filesRemoved;
+            payload["filesQuarantined"] = result.filesQuarantined;
+            payload["filesRecycled"] = result.filesRecycled;
+            payload["failures"] = result.failures;
+            payload["permanentDelete"] = result.permanentDelete;
+            auditSafety(safetyPolicy, decision, dryRun, ok, "Junk cleanup", {}, payload);
+            std::cout << jsonString(payload) << '\n';
+            return ok ? 0 : 1;
         }
 
 
@@ -1701,6 +2010,11 @@ int main(int argc, char *argv[]) {
 
             selfTestLog << "self-test," << pulseboost::currentTimestampUtc() << ',' << snapshot.healthScore << ','
                         << diskUsedPercent << ',' << startupCount << '\n';
+            QJsonObject payload = strictResponse(true);
+            payload["healthScore"] = snapshot.healthScore;
+            payload["diskUsedPercent"] = diskUsedPercent;
+            payload["startupCount"] = static_cast<qint64>(startupCount);
+            std::cout << jsonString(payload) << '\n';
             return 0;
         }
         if (command == "--chat") {
@@ -1715,10 +2029,14 @@ int main(int argc, char *argv[]) {
             const auto snapshot = collectSnapshotSafe(scanner);
             pulseboost::AiDiagnosticsEngine diagnosticsEngine;
             const auto decision = diagnosticsEngine.reason(message, snapshot, {});
-            std::cout << decision.reply << '\n';
+            QJsonObject payload = strictResponse(!decision.reply.empty(), decision.reply.empty() ? QStringLiteral("empty-ai-response") : QString());
+            payload["reply"] = QString::fromStdString(decision.reply);
+            std::cout << jsonString(payload) << '\n';
             selfTestLog << "chat," << pulseboost::currentTimestampUtc() << ',' << snapshot.healthScore << '\n';
-            return 0;
+            return decision.reply.empty() ? 1 : 0;
         }
+        std::cout << "{\"ok\":false,\"reason\":\"unknown-command\"}\n";
+        return 2;
     }
 
     appendGuiLog("GUI bootstrap start");
@@ -1876,10 +2194,16 @@ int main(int argc, char *argv[]) {
     } catch (const std::exception &ex) {
         std::ofstream selfTestLog("logs/self_test.log", std::ios::app);
         selfTestLog << "error," << pulseboost::currentTimestampUtc() << "," << ex.what() << '\n';
+        if (argc > 1) {
+            std::cout << "{\"ok\":false,\"reason\":\"exception\",\"message\":\"" << escapeJson(ex.what()) << "\"}\n";
+        }
         return 1;
     } catch (...) {
         std::ofstream selfTestLog("logs/self_test.log", std::ios::app);
         selfTestLog << "error," << pulseboost::currentTimestampUtc() << ",unknown\n";
+        if (argc > 1) {
+            std::cout << "{\"ok\":false,\"reason\":\"unknown-exception\"}\n";
+        }
         return 1;
     }
 }

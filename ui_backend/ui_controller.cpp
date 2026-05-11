@@ -1124,9 +1124,12 @@ void UiController::appendAction(const std::string &action, const std::string &de
 void UiController::runClean() {
     appendAction("junk-cleaner", "Starting safe cleanup", true);
     const auto result = junkCleaner_.cleanSafeTargets();
-    const QString message = QString("Cleaned %1 files and recovered %2.").arg(result.filesRemoved).arg(QString::fromStdString(formatBytes(result.bytesRecovered)));
-    appendAction("junk-cleaner", message.toStdString(), true);
-    emit actionFeedback(message, true);
+    const bool ok = result.failures == 0;
+    const QString message = QString("Quarantined %1 files and marked %2 recoverable.")
+                                .arg(result.filesQuarantined)
+                                .arg(QString::fromStdString(formatBytes(result.bytesRecovered)));
+    appendAction("junk-cleaner", message.toStdString(), ok);
+    emit actionFeedback(message, ok);
 }
 
 void UiController::runOptimize() {
@@ -1217,8 +1220,8 @@ bool UiController::flushDns() {
 
 bool UiController::optimizeTcp() {
     const bool ok = networkOptimizer_.optimizeTcp();
-    appendAction("net-tcp-tune", "TCP Autotuning and RSS", ok);
-    emit actionFeedback(ok ? "TCP parameters optimized for low latency." : "Failed to optimize TCP.", ok);
+    appendAction("net-tcp-tune", "TCP tuning requires advanced manual confirmation", ok);
+    emit actionFeedback(ok ? "TCP parameters updated." : "Advanced confirmation is required before changing global TCP settings.", ok);
     return ok;
 }
 
@@ -1226,8 +1229,8 @@ bool UiController::optimizeRam() {
     RamOptimizer optimizer(processManager_);
     const auto result = optimizer.optimizeWorkingSets();
     const bool ok = result.processesOptimized > 0;
-    appendAction("ram-optimize", "Trimmed working sets for " + std::to_string(result.processesOptimized) + " processes", ok);
-    emit actionFeedback(ok ? QString("Trimmed working sets for %1 processes.").arg(static_cast<qulonglong>(result.processesOptimized)) : "No suitable processes were trimmed.", ok);
+    appendAction("ram-optimize", result.message.empty() ? "RAM optimization requires advanced manual confirmation" : result.message, ok);
+    emit actionFeedback(ok ? QString("Trimmed working sets for %1 processes.").arg(static_cast<qulonglong>(result.processesOptimized)) : "RAM trimming is advanced/manual only and is not a guaranteed performance boost.", ok);
     return ok;
 }
 

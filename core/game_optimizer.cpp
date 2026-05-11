@@ -256,11 +256,11 @@ void persistSession(const SessionSnapshot &session) {
     settings.endArray();
     settings.endGroup();
 
-    settings.setValue(QStringLiteral("TauriUi/gameModeActive"), session.active);
-    settings.setValue(QStringLiteral("TauriUi/gameModeTargetPid"), static_cast<int>(session.gamePid));
-    settings.setValue(QStringLiteral("TauriUi/gameModeTargetName"), QString::fromStdString(session.displayName));
-    settings.setValue(QStringLiteral("TauriUi/gameModeTargetExecutable"), QString::fromStdString(session.executableName));
-    settings.setValue(QStringLiteral("TauriUi/aiSuspendedForGame"), session.aiSuspended);
+    settings.setValue(QStringLiteral("QtUi/gameModeActive"), session.active);
+    settings.setValue(QStringLiteral("QtUi/gameModeTargetPid"), static_cast<int>(session.gamePid));
+    settings.setValue(QStringLiteral("QtUi/gameModeTargetName"), QString::fromStdString(session.displayName));
+    settings.setValue(QStringLiteral("QtUi/gameModeTargetExecutable"), QString::fromStdString(session.executableName));
+    settings.setValue(QStringLiteral("QtUi/aiSuspendedForGame"), session.aiSuspended);
     settings.sync();
 }
 
@@ -297,11 +297,11 @@ void clearSession() {
     settings.beginGroup(QStringLiteral("GameOptimizerSession"));
     settings.remove(QString());
     settings.endGroup();
-    settings.setValue(QStringLiteral("TauriUi/gameModeActive"), false);
-    settings.remove(QStringLiteral("TauriUi/gameModeTargetPid"));
-    settings.remove(QStringLiteral("TauriUi/gameModeTargetName"));
-    settings.remove(QStringLiteral("TauriUi/gameModeTargetExecutable"));
-    settings.setValue(QStringLiteral("TauriUi/aiSuspendedForGame"), false);
+    settings.setValue(QStringLiteral("QtUi/gameModeActive"), false);
+    settings.remove(QStringLiteral("QtUi/gameModeTargetPid"));
+    settings.remove(QStringLiteral("QtUi/gameModeTargetName"));
+    settings.remove(QStringLiteral("QtUi/gameModeTargetExecutable"));
+    settings.setValue(QStringLiteral("QtUi/aiSuspendedForGame"), false);
     settings.sync();
 }
 

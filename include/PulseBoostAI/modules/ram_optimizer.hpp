@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 #include "PulseBoostAI/core/process_manager.hpp"
 
@@ -9,6 +10,8 @@ namespace pulseboost {
 struct RamOptimizationResult {
     std::uint64_t processesOptimized = 0;
     std::uint64_t processesSkipped = 0;
+    bool advancedModeRequired = false;
+    std::string message;
 };
 
 struct RamBreakdown {
@@ -25,9 +28,9 @@ class RamOptimizer {
 public:
     explicit RamOptimizer(ProcessManager &processManager);
 
-    RamOptimizationResult optimizeWorkingSets(double minMemoryMb = 256.0) const;
-    RamOptimizationResult flushStandbyList() const;
-    RamOptimizationResult enableRamSaverMode() const;
+    RamOptimizationResult optimizeWorkingSets(double minMemoryMb = 256.0, bool advancedMode = false) const;
+    RamOptimizationResult flushStandbyList(bool advancedMode = false) const;
+    RamOptimizationResult enableRamSaverMode(bool advancedMode = false) const;
     RamBreakdown currentBreakdown() const;
 
 private:

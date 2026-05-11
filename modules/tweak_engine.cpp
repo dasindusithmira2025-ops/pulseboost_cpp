@@ -212,6 +212,16 @@ bool deleteValue(HKEY rootKey, const std::wstring &subKey, const std::wstring &v
     return success;
 }
 
+bool registryValueExists(HKEY rootKey, const std::wstring &subKey, const std::wstring &valueName) {
+    HKEY keyHandle = nullptr;
+    if (RegOpenKeyExW(rootKey, subKey.c_str(), 0, KEY_QUERY_VALUE, &keyHandle) != ERROR_SUCCESS) {
+        return false;
+    }
+    const LONG status = RegQueryValueExW(keyHandle, valueName.c_str(), nullptr, nullptr, nullptr, nullptr);
+    RegCloseKey(keyHandle);
+    return status == ERROR_SUCCESS;
+}
+
 QJsonObject captureDwordSetting(HKEY rootKey, const std::wstring &subKey, const std::wstring &valueName) {
     QJsonObject entry;
     entry["kind"] = "dword";
@@ -247,7 +257,8 @@ bool restoreRegistryEntry(const QJsonObject &entry) {
     const bool exists = entry.value("exists").toBool(false);
     const std::string kind = entry.value("kind").toString().toStdString();
     if (!exists) {
-        return deleteValue(rootKey, subKey, name) || true;
+        const bool removed = deleteValue(rootKey, subKey, name);
+        return removed || !registryValueExists(rootKey, subKey, name);
     }
 
     if (kind == "dword") {

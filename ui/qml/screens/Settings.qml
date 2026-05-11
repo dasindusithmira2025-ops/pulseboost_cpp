@@ -34,7 +34,7 @@ Flickable {
                     Layout.fillWidth: true
                     spacing: Style.s6
                     Text { text: "Settings"; color: Style.text0; font.family: Style.fontDisplay; font.pixelSize: Style.f32; font.weight: Style.w700 }
-                    Text { text: "Native Qt/QML is now the shipping shell. Tauri remains in the repo as a deprecated reference surface."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f13; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                    Text { text: "Native Qt/QML is the shipping shell for production builds."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f13; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 }
                 Column {
                     spacing: Style.s4
@@ -245,7 +245,7 @@ Flickable {
                     spacing: Style.s12
                     Text { text: "About"; color: Style.text0; font.family: Style.fontDisplay; font.pixelSize: Style.f24; font.weight: Style.w700 }
                     Text { text: "PulseBoost AI now ships through the native Qt/QML shell backed directly by the C++ optimization core."; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; wrapMode: Text.WordWrap }
-                    Text { text: "The Tauri app remains in the repository as a deprecated reference surface only."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f12; wrapMode: Text.WordWrap }
+                    Text { text: "Deprecated UI experiments are excluded from production release builds."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f12; wrapMode: Text.WordWrap }
                 }
             }
         }

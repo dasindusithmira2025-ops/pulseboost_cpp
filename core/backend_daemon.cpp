@@ -361,7 +361,7 @@ CommandResult executeDaemonCommand(const QStringList &args,
         const QString mode = settings.value(QStringLiteral("mode"), QStringLiteral("local")).toString();
         const QString apiKey = settings.value(QStringLiteral("cloudApiKey"), QString()).toString();
         settings.endGroup();
-        return {0, jsonString(QJsonObject{{"ok", true}, {"mode", mode}, {"cloudConfigured", !apiKey.trimmed().isEmpty()}, {"apiKeyMasked", maskedLicenseKey(apiKey)}, {"suspendedForGame", settings.value(QStringLiteral("TauriUi/aiSuspendedForGame"), false).toBool()}}), true};
+        return {0, jsonString(QJsonObject{{"ok", true}, {"mode", mode}, {"cloudConfigured", !apiKey.trimmed().isEmpty()}, {"apiKeyMasked", maskedLicenseKey(apiKey)}, {"suspendedForGame", settings.value(QStringLiteral("QtUi/aiSuspendedForGame"), false).toBool()}}), true};
     }
     if (command == "--set-ai-preferences" && args.size() > 1) {
         const QString mode = args.at(1).trimmed().toLower();
@@ -377,7 +377,7 @@ CommandResult executeDaemonCommand(const QStringList &args,
         QString message;
         for (int index = 1; index < args.size(); ++index) { if (!message.isEmpty()) message.append(' '); message.append(args.at(index)); }
         QSettings settings(QStringLiteral("PulseBoost"), QStringLiteral("PulseBoost AI"));
-        if (settings.value(QStringLiteral("TauriUi/aiSuspendedForGame"), false).toBool()) return {0, QStringLiteral("PulseBoost AI is paused during the active game session to keep resource usage low. Revert the game optimization to wake it back up."), true};
+        if (settings.value(QStringLiteral("QtUi/aiSuspendedForGame"), false).toBool()) return {0, QStringLiteral("{\"ok\":false,\"reason\":\"ai-paused-for-game\"}"), true};
         const auto snapshot = collectSnapshotSafe(scanner);
         AiDiagnosticsEngine diagnosticsEngine;
         return {0, QString::fromStdString(diagnosticsEngine.reason(message.toStdString(), snapshot, {}).reply), true};
@@ -495,7 +495,7 @@ void BackendDaemon::handleReadyRead(QTcpSocket *socket) {
             for (int index = 1; index < argv.size(); ++index) { if (!message.isEmpty()) message.append(' '); message.append(argv.at(index)); }
             QSettings settings(QStringLiteral("PulseBoost"), QStringLiteral("PulseBoost AI"));
             QString reply;
-            if (settings.value(QStringLiteral("TauriUi/aiSuspendedForGame"), false).toBool()) {
+            if (settings.value(QStringLiteral("QtUi/aiSuspendedForGame"), false).toBool()) {
                 reply = QStringLiteral("PulseBoost AI is paused during the active game session to keep resource usage low. Revert the game optimization to wake it back up.");
             } else {
                 const auto snapshot = collectSnapshotSafe(scanner_);

@@ -78,6 +78,12 @@ struct DiskSummary {
 struct CleanupResult {
     std::uint64_t bytesRecovered = 0;
     int filesRemoved = 0;
+    int filesScanned = 0;
+    int filesQuarantined = 0;
+    int filesRecycled = 0;
+    int failures = 0;
+    bool dryRun = false;
+    bool permanentDelete = false;
     std::vector<std::string> actions;
 };
 

@@ -30,7 +30,7 @@ find_package(Qt6 REQUIRED COMPONENTS
 
 qt_standard_project_setup()
 
-add_executable(PulseBoost WIN32
+add_executable(PulseBoost
     # App entry point
     app/main.cpp
 
@@ -83,6 +83,7 @@ add_executable(PulseBoost WIN32
     modules/process_optimizer.cpp
     modules/service_manager.cpp
     modules/safety_guard.cpp
+    modules/safety_policy.cpp
     modules/tweak_engine.cpp
 
     # UI backend bridge (C++ ↔ QML)
@@ -121,6 +122,35 @@ add_executable(PulseBoost WIN32
     include/PulseBoostAI/core/game_optimizer.hpp
     include/PulseBoostAI/core/backend_daemon.hpp
 )
+
+enable_testing()
+
+add_executable(PulseBoostSafetyTests
+    tests/safety_policy_tests.cpp
+    tests/junk_cleaner_tests.cpp
+    modules/safety_policy.cpp
+    modules/junk_cleaner.cpp
+)
+
+target_include_directories(PulseBoostSafetyTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_compile_definitions(PulseBoostSafetyTests PRIVATE
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN
+    WINVER=0x0A00
+    _WIN32_WINNT=0x0A00
+    _CRT_SECURE_NO_WARNINGS
+)
+
+target_link_libraries(PulseBoostSafetyTests PRIVATE
+    Qt6::Core
+    Qt6::Sql
+    shell32
+)
+
+add_test(NAME PulseBoostSafetyTests COMMAND PulseBoostSafetyTests)
 
 set_target_properties(PulseBoost PROPERTIES OUTPUT_NAME "PulseBoostAI")
 

@@ -16,8 +16,14 @@ bool RamOptimizer::trimWorkingSet(HANDLE processHandle) {
     return EmptyWorkingSet(processHandle) == TRUE;
 }
 
-RamOptimizationResult RamOptimizer::optimizeWorkingSets(double minMemoryMb) const {
+RamOptimizationResult RamOptimizer::optimizeWorkingSets(double minMemoryMb, bool advancedMode) const {
     RamOptimizationResult result;
+    if (!advancedMode) {
+        result.advancedModeRequired = true;
+        result.message = "Working-set trimming is restricted to advanced manual use and is not a guaranteed performance boost.";
+        return result;
+    }
+
     const auto processes = processManager_.enumerateProcesses();
 
     for (const auto &process : processes) {
@@ -40,11 +46,15 @@ RamOptimizationResult RamOptimizer::optimizeWorkingSets(double minMemoryMb) cons
         CloseHandle(processHandle);
     }
 
+    result.message = "Trimmed eligible process working sets as a temporary memory pressure relief action.";
     return result;
 }
 
-RamOptimizationResult RamOptimizer::flushStandbyList() const {
-    RamOptimizationResult result = optimizeWorkingSets(64.0);
+RamOptimizationResult RamOptimizer::flushStandbyList(bool advancedMode) const {
+    RamOptimizationResult result = optimizeWorkingSets(64.0, advancedMode);
+    if (!advancedMode) {
+        return result;
+    }
     HANDLE currentProcess = GetCurrentProcess();
     if (!trimWorkingSet(currentProcess)) {
         ++result.processesSkipped;
@@ -52,8 +62,11 @@ RamOptimizationResult RamOptimizer::flushStandbyList() const {
     return result;
 }
 
-RamOptimizationResult RamOptimizer::enableRamSaverMode() const {
-    RamOptimizationResult result = optimizeWorkingSets(128.0);
+RamOptimizationResult RamOptimizer::enableRamSaverMode(bool advancedMode) const {
+    RamOptimizationResult result = optimizeWorkingSets(128.0, advancedMode);
+    if (!advancedMode) {
+        return result;
+    }
     HANDLE currentProcess = GetCurrentProcess();
     if (!trimWorkingSet(currentProcess)) {
         ++result.processesSkipped;

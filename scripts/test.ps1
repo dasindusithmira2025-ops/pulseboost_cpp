@@ -4,7 +4,6 @@
 
 $ErrorActionPreference = "Stop"
 $candidates = @(
-    (Join-Path $PSScriptRoot "..\build_run\$Configuration\PulseBoostAI.exe"),
     (Join-Path $PSScriptRoot "..\build\$Configuration\PulseBoostAI.exe"),
     (Join-Path $PSScriptRoot "..\build\$Configuration\PulseBoost.exe")
 )
@@ -29,15 +28,25 @@ function Invoke-PulseBoost {
         [string[]]$Arguments
     )
 
-    $process = Start-Process -FilePath $exe -ArgumentList $Arguments -PassThru -Wait
+    $outputFile = Join-Path ([System.IO.Path]::GetTempPath()) ("pulseboost-cli-" + [System.Guid]::NewGuid().ToString("N") + ".json")
+    $process = Start-Process -FilePath $exe -ArgumentList $Arguments -PassThru -Wait -RedirectStandardOutput $outputFile
+    $output = Get-Content $outputFile -Raw
+    Remove-Item -Force $outputFile
     if ($process.ExitCode -ne 0) {
         throw "PulseBoost failed for arguments: $($Arguments -join ' ')"
+    }
+    if ([string]::IsNullOrWhiteSpace($output)) {
+        throw "PulseBoost returned empty output for arguments: $($Arguments -join ' ')"
+    }
+    $json = $output | ConvertFrom-Json
+    if ($null -eq $json.ok -or $json.ok -ne $true) {
+        throw "PulseBoost returned invalid success JSON for arguments: $($Arguments -join ' ')"
     }
 }
 
 Invoke-PulseBoost -Arguments @("--scan")
 Invoke-PulseBoost -Arguments @("--chat", "analyze", "performance")
-Invoke-PulseBoost -Arguments @("--chat", "clean", "my", "pc")
+Invoke-PulseBoost -Arguments @("--clean", "--dry-run")
 Invoke-PulseBoost -Arguments @("--self-test")
 
-Write-Host "Smoke tests completed. Inspect logs\ for telemetry and self_test output."
+Write-Host "Smoke tests completed with strict JSON validation."

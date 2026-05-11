@@ -26,8 +26,10 @@ public:
     std::vector<std::string> analyze() const;
 
     bool flushDns() const;
-    bool optimizeTcp() const;
-    bool resetAdapter() const;
+    bool optimizeTcp(bool advancedMode = false) const;
+    bool resetAdapter(bool advancedMode = false) const;
+    bool backupNetworkSettings() const;
+    bool revertNetworkSettings(bool advancedMode = false) const;
 
     int measureLatency(const std::string &host = "8.8.8.8") const;
     NetworkDiagnostics diagnostics() const;
