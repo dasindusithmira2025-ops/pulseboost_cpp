@@ -46,7 +46,10 @@ GlassPanel {
 
     function screenComponent(screenId) {
         if (screenId === "home") return homeScreen
+        if (screenId === "action-center") return actionCenterScreen
         if (screenId === "optimizations") return optimizationsScreen
+        if (screenId === "audit-log") return auditLogScreen
+        if (screenId === "restore-center") return restoreCenterScreen
         if (screenId === "boost") return boostScreen
         if (screenId === "games") return gamesScreen
         if (screenId === "ai") return aiScreen
@@ -56,7 +59,10 @@ GlassPanel {
     }
 
     Component { id: homeScreen; Home {} }
+    Component { id: actionCenterScreen; ActionCenter {} }
     Component { id: optimizationsScreen; Optimizations {} }
+    Component { id: auditLogScreen; AuditLog {} }
+    Component { id: restoreCenterScreen; RestoreCenter {} }
     Component { id: boostScreen; BoostUp {} }
     Component { id: gamesScreen; Games {} }
     Component { id: aiScreen; AiChat {} }

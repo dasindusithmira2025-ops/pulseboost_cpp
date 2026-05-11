@@ -20,6 +20,7 @@
 #include "PulseBoostAI/modules/network_optimizer.hpp"
 #include "PulseBoostAI/modules/ram_optimizer.hpp"
 #include "PulseBoostAI/modules/safety_guard.hpp"
+#include "PulseBoostAI/modules/safety_policy.hpp"
 #include "PulseBoostAI/modules/tweak_engine.hpp"
 
 namespace pulseboost {
@@ -62,6 +63,10 @@ class UiController : public QObject {
     Q_PROPERTY(QVariantList advisorItems READ advisorItems NOTIFY metricsChanged)
     Q_PROPERTY(QVariantList optimizationPresets READ optimizationPresets CONSTANT)
     Q_PROPERTY(QVariantList detectedGames READ detectedGames NOTIFY gameModeChanged)
+    Q_PROPERTY(QVariantList actionCenterActions READ actionCenterActions NOTIFY actionCenterChanged)
+    Q_PROPERTY(QVariantMap latestProofReport READ latestProofReport NOTIFY proofReportChanged)
+    Q_PROPERTY(QVariantList auditLogEntries READ auditLogEntries NOTIFY auditLogChanged)
+    Q_PROPERTY(QVariantList restoreCenterItems READ restoreCenterItems NOTIFY restoreCenterChanged)
     Q_PROPERTY(QString aiMode READ aiMode NOTIFY uiStateChanged)
     Q_PROPERTY(bool aiCloudConfigured READ aiCloudConfigured NOTIFY uiStateChanged)
     Q_PROPERTY(bool uiDataReady READ uiDataReady NOTIFY uiStateChanged)
@@ -120,6 +125,10 @@ public:
     QVariantList advisorItems() const;
     QVariantList optimizationPresets() const;
     QVariantList detectedGames() const;
+    QVariantList actionCenterActions() const;
+    QVariantMap latestProofReport() const { return latestProofReport_; }
+    QVariantList auditLogEntries() const;
+    QVariantList restoreCenterItems() const;
     QString aiMode() const;
     bool aiCloudConfigured() const;
     bool uiDataReady() const { return uiDataReady_; }
@@ -158,6 +167,9 @@ public:
     Q_INVOKABLE bool optimizeDetectedGame(const QString &query);
     Q_INVOKABLE bool launchOptimizedGame(const QString &query);
     Q_INVOKABLE bool revertGameOptimization();
+    Q_INVOKABLE QVariantMap dryRunOptimizationAction(const QString &actionId);
+    Q_INVOKABLE QVariantMap executeOptimizationAction(const QString &actionId, bool confirmed);
+    Q_INVOKABLE void refreshAuditLog();
     Q_INVOKABLE bool setAiPreferences(const QString &mode, const QString &apiKey);
     Q_INVOKABLE void refreshAll();
 
@@ -170,6 +182,10 @@ signals:
     void notificationCenterChanged();
     void gameModeChanged();
     void snapshotsChanged();
+    void actionCenterChanged();
+    void proofReportChanged();
+    void auditLogChanged();
+    void restoreCenterChanged();
     void actionFeedback(QString message, bool success);
     void uiStateChanged();
 
@@ -183,6 +199,19 @@ private:
                                  double fraction) const;
     void refreshDetectedGame();
     void recomputeUiCaches();
+    QVariantMap captureProofSnapshot(const QString &label) const;
+    QVariantMap buildProofReport(const QString &actionId,
+                                 const QVariantMap &before,
+                                 const QVariantMap &after,
+                                 bool success,
+                                 const QString &summary) const;
+    bool writeSafetyAudit(const QString &actionId,
+                          bool dryRun,
+                          bool success,
+                          const QString &summary,
+                          const QJsonObject &request,
+                          const QJsonObject &result) const;
+    QVariantMap descriptorUiMap(const SafetyActionDescriptor &descriptor) const;
 
     SystemSnapshot snapshot_;
     JunkCleaner &junkCleaner_;
@@ -220,6 +249,9 @@ private:
     QVariantList cachedDetectedGames_;
     QVariantList cachedSystemSnapshots_;
     double cachedRecoverableRamMb_ = 0.0;
+    QVariantMap latestProofReport_;
+    QVariantMap lastDryRunResults_;
+    QVariantMap lastActionResults_;
 };
 
 }  // namespace pulseboost

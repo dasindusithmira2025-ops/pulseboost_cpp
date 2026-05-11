@@ -27,6 +27,8 @@ build.log
 *.sqlite3
 *.db
 *.jsonl
+__pycache__/
+*.pyc
 data/snapshots/
 data/tauri_snapshots/
 

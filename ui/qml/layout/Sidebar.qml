@@ -18,7 +18,10 @@ GlassPanel {
 
     readonly property var navItems: [
         { "id": "home", "label": "Home", "icon": "dashboard" },
+        { "id": "action-center", "label": "Action Center", "icon": "bolt" },
         { "id": "optimizations", "label": "Optimizations", "icon": "bolt" },
+        { "id": "audit-log", "label": "Audit Log", "icon": "history" },
+        { "id": "restore-center", "label": "Restore", "icon": "history" },
         { "id": "boost", "label": "Boost-Up", "icon": "storage" },
         { "id": "games", "label": "Games", "icon": "game" },
         { "id": "ai", "label": "AI", "icon": "chat" },

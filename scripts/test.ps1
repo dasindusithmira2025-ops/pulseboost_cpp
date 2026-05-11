@@ -48,5 +48,6 @@ Invoke-PulseBoost -Arguments @("--scan")
 Invoke-PulseBoost -Arguments @("--chat", "analyze", "performance")
 Invoke-PulseBoost -Arguments @("--clean", "--dry-run")
 Invoke-PulseBoost -Arguments @("--self-test")
+Invoke-PulseBoost -Arguments @("--validate-qml")
 
 Write-Host "Smoke tests completed with strict JSON validation."

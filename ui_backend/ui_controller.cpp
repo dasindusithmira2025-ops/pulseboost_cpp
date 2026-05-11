@@ -13,6 +13,8 @@
 #include <QRegularExpression>
 #include <QSet>
 #include <QSettings>
+#include <QSqlDatabase>
+#include <QSqlQuery>
 #include <QStandardPaths>
 #include <QTextStream>
 #include <QUrl>
@@ -77,6 +79,59 @@ QString snapshotsDirectoryPath() {
         root = QDir::currentPath() + "/data";
     }
     return root + "/snapshots";
+}
+
+QString quarantineDirectoryPath() {
+    QString root = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (root.isEmpty()) {
+        root = QDir::currentPath() + "/data";
+    }
+    return root + "/quarantine";
+}
+
+QString pulseBoostDatabasePath() {
+    return QString::fromStdString(SafetyPolicy::defaultDatabasePath().string());
+}
+
+QString actionDisplayName(const QString &actionId) {
+    if (actionId == "junk.clean") return QStringLiteral("Safe Junk Cleanup");
+    if (actionId == "network.flush_dns") return QStringLiteral("Flush DNS Cache");
+    if (actionId == "network.optimize_tcp") return QStringLiteral("Advanced TCP Tuning");
+    if (actionId == "network.revert") return QStringLiteral("Revert Network Tuning");
+    if (actionId == "ram.trim_working_sets") return QStringLiteral("Manual RAM Working-Set Trim");
+    if (actionId == "disk.optimize") return QStringLiteral("Windows Disk Optimization");
+    if (actionId == "restore.create") return QStringLiteral("Create Restore Point");
+    if (actionId == "snapshot.restore") return QStringLiteral("Restore Snapshot");
+    if (actionId == "game.revert") return QStringLiteral("Revert Game Optimization");
+    if (actionId == "tweak.apply") return QStringLiteral("Apply Selected Tweak");
+    if (actionId == "tweak.revert") return QStringLiteral("Revert Selected Tweak");
+    return actionId;
+}
+
+QString expectedEffectForAction(const QString &actionId) {
+    if (actionId == "junk.clean") return QStringLiteral("Move known safe cleanup targets into quarantine and report recoverable storage.");
+    if (actionId == "network.flush_dns") return QStringLiteral("Clear resolver cache so Windows refreshes DNS lookups.");
+    if (actionId == "network.optimize_tcp") return QStringLiteral("Apply global TCP settings only after backup and explicit confirmation.");
+    if (actionId == "network.revert") return QStringLiteral("Restore PulseBoost network tuning to conservative Windows defaults.");
+    if (actionId == "ram.trim_working_sets") return QStringLiteral("Manually ask selected processes to reduce working-set pressure; not a guaranteed speed boost.");
+    if (actionId == "disk.optimize") return QStringLiteral("Ask Windows to run its built-in system drive optimization task.");
+    if (actionId == "restore.create") return QStringLiteral("Create a Windows restore point before higher-risk changes.");
+    if (actionId == "snapshot.restore") return QStringLiteral("Restore startup baseline from a PulseBoost snapshot.");
+    if (actionId == "game.revert") return QStringLiteral("Undo temporary game-session priority, power, and network state.");
+    if (actionId == "tweak.apply") return QStringLiteral("Apply a reversible registered tweak after backup metadata is available.");
+    if (actionId == "tweak.revert") return QStringLiteral("Use stored rollback metadata to undo a registered tweak.");
+    return QStringLiteral("Review safety metadata before execution.");
+}
+
+QString toneForRisk(const QString &risk) {
+    if (risk == "critical" || risk == "high") return QStringLiteral("error");
+    if (risk == "moderate") return QStringLiteral("warning");
+    if (risk == "low") return QStringLiteral("success");
+    return QStringLiteral("neutral");
+}
+
+QJsonObject variantMapToJsonObject(const QVariantMap &map) {
+    return QJsonObject::fromVariantMap(map);
 }
 
 QString snapshotStartupKey(const StartupItem &item) {
@@ -832,6 +887,139 @@ QVariantList UiController::detectedGames() const {
     return cachedDetectedGames_;
 }
 
+QVariantMap UiController::descriptorUiMap(const SafetyActionDescriptor &descriptor) const {
+    const SafetyPolicy policy;
+    const QJsonObject json = policy.descriptorJson(descriptor);
+    QVariantMap map = json.toVariantMap();
+    const QString actionId = map.value("actionId").toString();
+    const QString risk = map.value("riskLevel").toString();
+    map["name"] = actionDisplayName(actionId);
+    map["riskTone"] = toneForRisk(risk);
+    map["requiredConfirmation"] = map.value("confirmationRequired").toBool()
+                                      ? QStringLiteral("Required")
+                                      : QStringLiteral("Not required");
+    map["backupRestoreAvailability"] = map.value("backupRequired").toBool()
+                                           ? QStringLiteral("Backup required")
+                                           : (map.value("rollbackAvailable").toBool() ? QStringLiteral("Rollback available") : QStringLiteral("No rollback"));
+    map["expectedEffect"] = expectedEffectForAction(actionId);
+    map["dryRunResult"] = lastDryRunResults_.value(actionId, QStringLiteral("Not run")).toString();
+    map["actualResult"] = lastActionResults_.value(actionId, QStringLiteral("No execution yet")).toString();
+    map["auditLogLink"] = QStringLiteral("audit:%1").arg(actionId);
+    map["canExecuteFromCenter"] = actionId == "junk.clean" ||
+                                  actionId == "network.flush_dns" ||
+                                  actionId == "network.optimize_tcp" ||
+                                  actionId == "network.revert" ||
+                                  actionId == "ram.trim_working_sets" ||
+                                  actionId == "disk.optimize" ||
+                                  actionId == "restore.create" ||
+                                  actionId == "game.revert";
+    return map;
+}
+
+QVariantList UiController::actionCenterActions() const {
+    QVariantList actions;
+    const SafetyPolicy policy;
+    const QStringList order = {
+        QStringLiteral("junk.clean"),
+        QStringLiteral("network.flush_dns"),
+        QStringLiteral("network.optimize_tcp"),
+        QStringLiteral("network.revert"),
+        QStringLiteral("ram.trim_working_sets"),
+        QStringLiteral("disk.optimize"),
+        QStringLiteral("restore.create"),
+        QStringLiteral("snapshot.restore"),
+        QStringLiteral("tweak.apply"),
+        QStringLiteral("tweak.revert"),
+        QStringLiteral("game.revert"),
+    };
+
+    for (const QString &id : order) {
+        const auto descriptor = policy.descriptorFor(id.toStdString());
+        if (descriptor.has_value()) {
+            actions.push_back(descriptorUiMap(*descriptor));
+        }
+    }
+    return actions;
+}
+
+QVariantList UiController::auditLogEntries() const {
+    QVariantList entries;
+    const QString connectionName = QStringLiteral("pulseboost_ui_audit_%1").arg(reinterpret_cast<quintptr>(this));
+    QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName);
+    db.setDatabaseName(pulseBoostDatabasePath());
+    if (!db.open()) {
+        QSqlDatabase::removeDatabase(connectionName);
+        return entries;
+    }
+
+    QSqlQuery query(db);
+    if (query.exec(QStringLiteral(
+            "SELECT id, created_at, action_type, status, summary, risk_level, dry_run, request_json, result_json "
+            "FROM action_audit_log ORDER BY id DESC LIMIT 250"))) {
+        while (query.next()) {
+            QVariantMap row;
+            row["id"] = query.value(0).toLongLong();
+            row["createdAt"] = query.value(1).toString();
+            row["actionType"] = query.value(2).toString();
+            row["status"] = query.value(3).toString();
+            row["summary"] = query.value(4).toString();
+            row["riskLevel"] = query.value(5).toString();
+            row["dryRun"] = query.value(6).toInt() != 0;
+            row["requestJson"] = query.value(7).toString();
+            row["resultJson"] = query.value(8).toString();
+            row["tone"] = row.value("status").toString() == QStringLiteral("success") ? QStringLiteral("success") : QStringLiteral("warning");
+            entries.push_back(row);
+        }
+    }
+    db.close();
+    QSqlDatabase::removeDatabase(connectionName);
+    return entries;
+}
+
+QVariantList UiController::restoreCenterItems() const {
+    QVariantList rows;
+    for (const QVariant &value : cachedSystemSnapshots_) {
+        QVariantMap item = value.toMap();
+        item["type"] = QStringLiteral("System Snapshot");
+        item["name"] = item.value("id").toString();
+        item["status"] = QStringLiteral("Rollback capable");
+        item["detail"] = QStringLiteral("Startup baseline and heavy process proof captured.");
+        item["tone"] = QStringLiteral("success");
+        rows.push_back(item);
+    }
+
+    QDir quarantine(quarantineDirectoryPath());
+    if (quarantine.exists()) {
+        const QFileInfoList files = quarantine.entryInfoList(QDir::Files, QDir::Time);
+        for (const QFileInfo &file : files) {
+            QVariantMap item;
+            item["type"] = QStringLiteral("Quarantined File");
+            item["name"] = file.fileName();
+            item["status"] = QStringLiteral("Recoverable");
+            item["detail"] = QString("%1 KB in quarantine").arg(QString::number(file.size() / 1024.0, 'f', 1));
+            item["createdUtc"] = file.lastModified().toUTC().toString(Qt::ISODate);
+            item["tone"] = QStringLiteral("warning");
+            rows.push_back(item);
+        }
+    }
+
+    for (const QVariant &value : auditLogEntries()) {
+        const QVariantMap audit = value.toMap();
+        const QString action = audit.value("actionType").toString();
+        if (action.contains("revert") || action.contains("restore") || action.contains("network.revert")) {
+            QVariantMap item;
+            item["type"] = QStringLiteral("Rollback Action");
+            item["name"] = action;
+            item["status"] = audit.value("status").toString();
+            item["detail"] = audit.value("summary").toString();
+            item["createdUtc"] = audit.value("createdAt").toString();
+            item["tone"] = audit.value("tone").toString();
+            rows.push_back(item);
+        }
+    }
+    return rows;
+}
+
 QString UiController::aiMode() const {
     QSettings settings(QStringLiteral("PulseBoost"), QStringLiteral("PulseBoost AI"));
     settings.beginGroup(QStringLiteral("AiMode"));
@@ -953,6 +1141,167 @@ bool UiController::revertGameOptimization() {
     return result.ok;
 }
 
+QVariantMap UiController::dryRunOptimizationAction(const QString &actionId) {
+    const QString id = actionId.trimmed();
+    QVariantMap response;
+    response["actionId"] = id;
+    response["ok"] = false;
+
+    const SafetyPolicy policy;
+    SafetyRequest request;
+    request.actionId = id.toStdString();
+    request.dryRun = true;
+    const SafetyDecision decision = policy.evaluate(request);
+    if (!decision.allowed) {
+        const QString reason = QString::fromStdString(decision.reason);
+        response["reason"] = reason;
+        lastDryRunResults_[id] = "Blocked: " + reason;
+        writeSafetyAudit(id, true, false, "Dry-run blocked: " + reason, variantMapToJsonObject(response), variantMapToJsonObject(response));
+        emit actionCenterChanged();
+        emit auditLogChanged();
+        return response;
+    }
+
+    QString summary;
+    if (id == "junk.clean") {
+        CleanupOptions options;
+        options.dryRun = true;
+        const auto result = junkCleaner_.cleanSafeTargets(options);
+        summary = QString("Would quarantine %1 files, %2 recoverable.")
+                      .arg(result.filesScanned)
+                      .arg(QString::fromStdString(formatBytes(result.bytesRecovered)));
+        response["filesScanned"] = result.filesScanned;
+        response["bytesRecoverable"] = static_cast<qlonglong>(result.bytesRecovered);
+    } else if (id == "ram.trim_working_sets") {
+        summary = QString("Would review %1 heavy processes for manual working-set trim. Advanced confirmation required.")
+                      .arg(snapshot_.heavyProcesses.size());
+    } else if (id == "network.optimize_tcp") {
+        summary = QStringLiteral("Would create a network backup and prepare global TCP tuning. Advanced confirmation required.");
+    } else if (id == "network.revert") {
+        summary = QStringLiteral("Would revert PulseBoost network tuning to conservative defaults. Advanced confirmation required.");
+    } else if (id == "disk.optimize") {
+        summary = QStringLiteral("Would ask Windows to optimize the system drive.");
+    } else if (id == "restore.create") {
+        summary = QStringLiteral("Would request a Windows restore point.");
+    } else if (id == "network.flush_dns") {
+        summary = QStringLiteral("Would flush the DNS resolver cache.");
+    } else if (id == "game.revert") {
+        summary = QStringLiteral("Would revert current game optimization session if one is active.");
+    } else {
+        summary = QStringLiteral("Dry-run metadata prepared.");
+    }
+
+    response["ok"] = true;
+    response["summary"] = summary;
+    response["riskLevel"] = QString::fromStdString(SafetyPolicy::riskToString(decision.descriptor.riskLevel));
+    lastDryRunResults_[id] = summary;
+    writeSafetyAudit(id, true, true, summary, variantMapToJsonObject(response), variantMapToJsonObject(response));
+    emit actionCenterChanged();
+    emit auditLogChanged();
+    return response;
+}
+
+QVariantMap UiController::executeOptimizationAction(const QString &actionId, bool confirmed) {
+    const QString id = actionId.trimmed();
+    QVariantMap response;
+    response["actionId"] = id;
+    response["ok"] = false;
+
+    SafetyPolicy policy;
+    const auto descriptor = policy.descriptorFor(id.toStdString());
+    if (!descriptor.has_value()) {
+        response["reason"] = QStringLiteral("unknown-action");
+        return response;
+    }
+
+    bool backupCreated = false;
+    if (id == "network.optimize_tcp" || id == "network.revert") {
+        backupCreated = networkOptimizer_.backupNetworkSettings();
+    } else if (descriptor->backupRequired) {
+        backupCreated = safetyGuard_.createRestorePoint(L"PulseBoost AI - action center");
+    }
+
+    SafetyRequest request;
+    request.actionId = id.toStdString();
+    request.dryRun = false;
+    request.confirmed = confirmed;
+    request.advancedMode = descriptor->advancedOnly ? confirmed : true;
+    request.backupCreated = backupCreated || !descriptor->backupRequired;
+
+    const SafetyDecision decision = policy.evaluate(request);
+    if (!decision.allowed) {
+        const QString reason = QString::fromStdString(decision.reason);
+        response["reason"] = reason;
+        lastActionResults_[id] = "Blocked: " + reason;
+        writeSafetyAudit(id, false, false, "Execution blocked: " + reason, variantMapToJsonObject(response), variantMapToJsonObject(response));
+        emit actionCenterChanged();
+        emit auditLogChanged();
+        emit actionFeedback("Action blocked: " + reason, false);
+        return response;
+    }
+
+    const QVariantMap before = captureProofSnapshot(QStringLiteral("Before"));
+    bool ok = false;
+    QString summary;
+    if (id == "junk.clean") {
+        const auto result = junkCleaner_.cleanSafeTargets();
+        ok = result.failures == 0;
+        summary = QString("Quarantined %1 files; %2 recoverable.")
+                      .arg(result.filesQuarantined)
+                      .arg(QString::fromStdString(formatBytes(result.bytesRecovered)));
+    } else if (id == "network.flush_dns") {
+        ok = networkOptimizer_.flushDns();
+        summary = ok ? QStringLiteral("DNS resolver cache flushed.") : QStringLiteral("DNS flush failed.");
+    } else if (id == "network.optimize_tcp") {
+        ok = networkOptimizer_.optimizeTcp(true);
+        summary = ok ? QStringLiteral("Advanced TCP tuning applied after backup.") : QStringLiteral("TCP tuning failed.");
+    } else if (id == "network.revert") {
+        ok = networkOptimizer_.revertNetworkSettings(true);
+        summary = ok ? QStringLiteral("Network tuning reverted.") : QStringLiteral("Network revert failed.");
+    } else if (id == "ram.trim_working_sets") {
+        RamOptimizer optimizer(processManager_);
+        const auto result = optimizer.optimizeWorkingSets(256.0, true);
+        ok = result.processesOptimized > 0;
+        summary = result.message.empty()
+                      ? QString("Trimmed working sets for %1 processes.").arg(static_cast<qulonglong>(result.processesOptimized))
+                      : QString::fromStdString(result.message);
+    } else if (id == "disk.optimize") {
+        DefragTrigger defrag;
+        ok = defrag.optimizeSystemDrive();
+        summary = ok ? QStringLiteral("Windows disk optimization started.") : QStringLiteral("Disk optimization trigger failed.");
+    } else if (id == "restore.create") {
+        ok = safetyGuard_.createRestorePoint(L"PulseBoost AI - manual action center");
+        summary = ok ? QStringLiteral("Restore point requested.") : QStringLiteral("Restore point request failed.");
+    } else if (id == "game.revert") {
+        const auto result = gameOptimizer_.revertOptimization();
+        ok = result.ok;
+        summary = ok ? QStringLiteral("Game optimization state reverted.") : QStringLiteral("Game revert failed or no session was active.");
+    } else {
+        summary = QStringLiteral("This action requires a specific target and is shown for audit visibility only.");
+    }
+
+    recomputeUiCaches();
+    const QVariantMap after = captureProofSnapshot(QStringLiteral("After"));
+    latestProofReport_ = buildProofReport(id, before, after, ok, summary);
+    response["ok"] = ok;
+    response["summary"] = summary;
+    response["proof"] = latestProofReport_;
+    lastActionResults_[id] = summary;
+    appendAction(id.toStdString(), summary.toStdString(), ok);
+    writeSafetyAudit(id, false, ok, summary, variantMapToJsonObject(before), variantMapToJsonObject(latestProofReport_));
+    emit proofReportChanged();
+    emit actionCenterChanged();
+    emit auditLogChanged();
+    emit restoreCenterChanged();
+    emit actionFeedback(summary, ok);
+    return response;
+}
+
+void UiController::refreshAuditLog() {
+    emit auditLogChanged();
+    emit restoreCenterChanged();
+}
+
 bool UiController::setAiPreferences(const QString &mode, const QString &apiKey) {
     QSettings settings(QStringLiteral("PulseBoost"), QStringLiteral("PulseBoost AI"));
     settings.beginGroup(QStringLiteral("AiMode"));
@@ -1023,6 +1372,7 @@ bool UiController::takeSystemSnapshot() {
 
     appendAction("system-snapshot", "Captured snapshot " + snapshotId.toStdString(), true);
     emit snapshotsChanged();
+    emit restoreCenterChanged();
     emit actionFeedback("System snapshot captured.", true);
     return true;
 }
@@ -1079,6 +1429,7 @@ bool UiController::restoreSystemSnapshot(const QString &snapshotId) {
     }
     appendAction("snapshot-restore", details, success);
     emit snapshotsChanged();
+    emit restoreCenterChanged();
 
     if (success) {
         emit actionFeedback(disabledCount > 0
@@ -1119,6 +1470,78 @@ void UiController::appendAction(const std::string &action, const std::string &de
     recomputeUiCaches();
     emit actionsChanged();
     emit notificationCenterChanged();
+}
+
+QVariantMap UiController::captureProofSnapshot(const QString &label) const {
+    QVariantMap proof;
+    proof["label"] = label;
+    proof["capturedAt"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+    proof["cpuPressure"] = snapshot_.cpuUsagePercent;
+    proof["ramPressure"] = snapshot_.ramUsagePercent;
+    proof["diskUsage"] = snapshot_.diskUsagePercent;
+    proof["startupItemCount"] = startupOptimizer_.scanStartupItems().size();
+    proof["recoverableStorageEstimateMb"] = std::max(0.0, cachedRecoverableRamMb_ * 0.15);
+    proof["bootStartupEstimateSeconds"] = std::max(8.0, static_cast<double>(proof.value("startupItemCount").toInt()) * 1.8);
+
+    QVariantList heavy;
+    for (const ProcessInfo &process : snapshot_.heavyProcesses) {
+        QVariantMap row;
+        row["pid"] = static_cast<int>(process.pid);
+        row["name"] = QString::fromStdString(process.name);
+        row["cpuPercent"] = process.cpuPercent;
+        row["memoryMb"] = process.memoryMb;
+        row["critical"] = process.isCritical;
+        heavy.push_back(row);
+        if (heavy.size() >= 8) {
+            break;
+        }
+    }
+    proof["heavyProcesses"] = heavy;
+    proof["heavyProcessSummary"] = heavy.isEmpty()
+                                      ? QStringLiteral("No heavy processes sampled")
+                                      : QString("%1 heavy processes sampled").arg(heavy.size());
+    return proof;
+}
+
+QVariantMap UiController::buildProofReport(const QString &actionId,
+                                           const QVariantMap &before,
+                                           const QVariantMap &after,
+                                           bool success,
+                                           const QString &summary) const {
+    QVariantMap report;
+    report["actionId"] = actionId;
+    report["actionName"] = actionDisplayName(actionId);
+    report["success"] = success;
+    report["summary"] = summary;
+    report["createdAt"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+    report["before"] = before;
+    report["after"] = after;
+    report["cpuDelta"] = after.value("cpuPressure").toDouble() - before.value("cpuPressure").toDouble();
+    report["ramDelta"] = after.value("ramPressure").toDouble() - before.value("ramPressure").toDouble();
+    report["diskDelta"] = after.value("diskUsage").toDouble() - before.value("diskUsage").toDouble();
+    report["startupDelta"] = after.value("startupItemCount").toInt() - before.value("startupItemCount").toInt();
+    report["recoverableStorageDeltaMb"] = after.value("recoverableStorageEstimateMb").toDouble() - before.value("recoverableStorageEstimateMb").toDouble();
+    report["bootEstimateDeltaSeconds"] = after.value("bootStartupEstimateSeconds").toDouble() - before.value("bootStartupEstimateSeconds").toDouble();
+    return report;
+}
+
+bool UiController::writeSafetyAudit(const QString &actionId,
+                                    bool dryRun,
+                                    bool success,
+                                    const QString &summary,
+                                    const QJsonObject &request,
+                                    const QJsonObject &result) const {
+    const SafetyPolicy policy;
+    const auto descriptor = policy.descriptorFor(actionId.toStdString());
+    return policy.audit(SafetyAuditEntry{
+        .actionId = actionId.toStdString(),
+        .status = success ? "success" : "blocked",
+        .summary = summary.toStdString(),
+        .riskLevel = descriptor.has_value() ? descriptor->riskLevel : RiskLevel::ReadOnly,
+        .dryRun = dryRun,
+        .requestJson = request,
+        .resultJson = result,
+    });
 }
 
 void UiController::runClean() {
@@ -1391,6 +1814,9 @@ void UiController::refreshAll() {
     emit notificationCenterChanged();
     emit gameModeChanged();
     emit snapshotsChanged();
+    emit actionCenterChanged();
+    emit auditLogChanged();
+    emit restoreCenterChanged();
     emit uiStateChanged();
 }
 

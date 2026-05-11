@@ -20,6 +20,7 @@
 #include <QDebug>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlComponent>
 #include <QQmlContext>
 #include <QQmlError>
 #include <QFontDatabase>
@@ -1066,6 +1067,42 @@ int main(int argc, char *argv[]) {
             payload["actions"] = actions;
             std::cout << jsonString(payload) << '\n';
             return 0;
+        }
+
+        if (command == "--validate-qml") {
+            const QStringList screens = {
+                QStringLiteral("Home.qml"),
+                QStringLiteral("ActionCenter.qml"),
+                QStringLiteral("Optimizations.qml"),
+                QStringLiteral("AuditLog.qml"),
+                QStringLiteral("RestoreCenter.qml"),
+                QStringLiteral("BoostUp.qml"),
+                QStringLiteral("Games.qml"),
+                QStringLiteral("Backup.qml"),
+                QStringLiteral("AiChat.qml"),
+                QStringLiteral("Settings.qml"),
+            };
+            QJsonArray loaded;
+            QJsonArray errors;
+            for (const QString &screen : screens) {
+                QFile file(QStringLiteral(":/ui/qml/screens/%1").arg(screen));
+                if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                    errors.append(QJsonObject{{"screen", screen}, {"errors", QJsonArray{QStringLiteral("resource-open-failed")}}});
+                    continue;
+                }
+                const QByteArray source = file.readAll();
+                if (!source.contains("import QtQuick") || !source.contains("SystemCtrl")) {
+                    errors.append(QJsonObject{{"screen", screen}, {"errors", QJsonArray{QStringLiteral("screen-source-validation-failed")}}});
+                    continue;
+                }
+                loaded.append(screen);
+            }
+            QJsonObject payload;
+            payload["ok"] = errors.isEmpty();
+            payload["loaded"] = loaded;
+            payload["errors"] = errors;
+            std::cout << jsonString(payload) << '\n';
+            return errors.isEmpty() ? 0 : 1;
         }
 
         if (command == "--list-tweaks") {

@@ -8,6 +8,7 @@
 #include <algorithm>
 
 #include "PulseBoostAI/common/windows_utils.hpp"
+#include "PulseBoostAI/modules/safety_policy.hpp"
 
 namespace pulseboost {
 
@@ -102,6 +103,11 @@ bool AgentEngine::executeActionByName(const QString &actionName, QStringList &ex
         return false;
     }
 
+    auto advisoryOnly = [&executionNotes](const QString &label, const QString &reason) {
+        executionNotes.push_back(label + " was prepared as advisory-only. " + reason);
+        return false;
+    };
+
     if (normalized == "create_restore_point") {
         const bool ok = safetyGuard_.createRestorePoint(L"PulseBoost AI");
         history_.record(ActionRecord {currentTimestampUtc(), "ai-restore-point", "Requested restore point", ok});
@@ -117,17 +123,7 @@ bool AgentEngine::executeActionByName(const QString &actionName, QStringList &ex
     }
 
     if (normalized == "enable_game_mode") {
-        for (const auto &process : latestSnapshot_.heavyProcesses) {
-            if (process.isCritical || process.memoryMb < 512.0) {
-                continue;
-            }
-            const bool ok = gameMode_.enableForProcess(process.pid);
-            history_.record(ActionRecord {currentTimestampUtc(), "ai-game-mode", "Target PID " + std::to_string(process.pid), ok});
-            executionNotes.push_back(ok ? "Enabled game mode for " + QString::fromStdString(process.name) + "." : "Failed to enable game mode.");
-            return ok;
-        }
-        executionNotes.push_back("No active heavy foreground game detected.");
-        return false;
+        return advisoryOnly(QStringLiteral("Game mode"), QStringLiteral("Manual confirmation is required before changing process priority or power state."));
     }
 
     if (normalized == "optimize_developer_mode") {
@@ -148,31 +144,15 @@ bool AgentEngine::executeActionByName(const QString &actionName, QStringList &ex
     }
 
     if (normalized == "optimize_ram") {
-        RamOptimizer optimizer(processManager_);
-        const auto result = optimizer.optimizeWorkingSets();
-        const bool ok = result.processesOptimized > 0;
-        history_.record(ActionRecord {currentTimestampUtc(),
-                                      "ai-ram-optimize",
-                                      "Trimmed working sets for " + std::to_string(result.processesOptimized) + " processes",
-                                      ok});
-        executionNotes.push_back(QString("Trimmed working sets for %1 processes.").arg(static_cast<qulonglong>(result.processesOptimized)));
-        return ok;
+        return advisoryOnly(QStringLiteral("RAM trim"), QStringLiteral("Working-set trimming is advanced/manual and is not a guaranteed performance boost."));
     }
 
     if (normalized == "optimize_disk") {
-        const bool ok = defragTrigger_.optimizeSystemDrive();
-        history_.record(ActionRecord {currentTimestampUtc(), "ai-disk-optimize", "Triggered system drive optimization", ok});
-        executionNotes.push_back(ok ? "Started system drive optimization." : "Disk optimization trigger failed.");
-        return ok;
+        return advisoryOnly(QStringLiteral("Disk optimization"), QStringLiteral("The Action Center must capture proof and confirmation before execution."));
     }
 
     if (normalized == "optimize_network") {
-        const bool dns = networkOptimizer_.flushDns();
-        const bool tcp = networkOptimizer_.optimizeTcp();
-        const bool ok = dns && tcp;
-        history_.record(ActionRecord {currentTimestampUtc(), "ai-network-optimize", "Flushed DNS and tuned TCP", ok});
-        executionNotes.push_back(ok ? "Applied network optimization (DNS flush + TCP tune)." : "Network optimization partially failed.");
-        return ok;
+        return advisoryOnly(QStringLiteral("Network optimization"), QStringLiteral("Global netsh/TCP changes require backup plus explicit advanced confirmation."));
     }
 
     if (normalized == "full_scan") {
@@ -183,40 +163,12 @@ bool AgentEngine::executeActionByName(const QString &actionName, QStringList &ex
     }
 
     if (normalized == "optimize_all") {
-        bool ok = true;
-        ok = executeActionByName("create_restore_point", executionNotes) && ok;
-        ok = executeActionByName("clean_junk", executionNotes) && ok;
-        ok = executeActionByName("optimize_ram", executionNotes) && ok;
-        return ok;
+        executionNotes.push_back("Prepared a full optimization plan. Run dry-runs in the Action Center before applying individual actions.");
+        return false;
     }
 
     if (normalized.startsWith("kill_process:")) {
-        const QString entity = normalized.mid(QString("kill_process:").size()).trimmed();
-        if (entity.isEmpty()) {
-            executionNotes.push_back("Process target was empty.");
-            return false;
-        }
-
-        for (const auto &process : latestSnapshot_.heavyProcesses) {
-            const QString processName = QString::fromStdString(process.name).toLower();
-            if (process.isCritical) {
-                continue;
-            }
-            if (processName == entity || processName == (entity + ".exe")) {
-                HANDLE processHandle = OpenProcess(PROCESS_TERMINATE, FALSE, static_cast<DWORD>(process.pid));
-                if (processHandle == nullptr) {
-                    executionNotes.push_back("Failed to open process handle for termination.");
-                    return false;
-                }
-                const bool terminated = TerminateProcess(processHandle, 1) == TRUE;
-                CloseHandle(processHandle);
-                history_.record(ActionRecord {currentTimestampUtc(), "ai-kill-process", "PID " + std::to_string(process.pid), terminated});
-                executionNotes.push_back(terminated ? ("Terminated " + processName + ".") : ("Failed to terminate " + processName + "."));
-                return terminated;
-            }
-        }
-        executionNotes.push_back("No non-critical process matched " + entity + ".");
-        return false;
+        return advisoryOnly(QStringLiteral("Process termination"), QStringLiteral("AI can explain risk, but process termination must be user-confirmed outside chat."));
     }
 
     executionNotes.push_back("Unknown action: " + actionName);
@@ -259,6 +211,7 @@ void AgentEngine::ask(const QString &message) {
     pendingPlan_ = decision.plan;
 
     if (decision.shouldExecutePlan) {
+        executionNotes_.push_back("AI prepared the requested plan as advisory-first. Use the Action Center dry-run buttons before applying changes.");
         for (const auto &step : pendingPlan_) {
             if (!step.execute) {
                 continue;

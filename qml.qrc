@@ -60,7 +60,10 @@
         <file>ui/qml/components/ai/ContextChip.qml</file>
 
         <file>ui/qml/screens/Home.qml</file>
+        <file>ui/qml/screens/ActionCenter.qml</file>
         <file>ui/qml/screens/Optimizations.qml</file>
+        <file>ui/qml/screens/AuditLog.qml</file>
+        <file>ui/qml/screens/RestoreCenter.qml</file>
         <file>ui/qml/screens/BoostUp.qml</file>
         <file>ui/qml/screens/Games.qml</file>
         <file>ui/qml/screens/Backup.qml</file>
