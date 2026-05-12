@@ -34,7 +34,7 @@ Flickable {
                     Layout.fillWidth: true
                     spacing: Style.s6
                     Text { text: "Settings"; color: Style.text0; font.family: Style.fontDisplay; font.pixelSize: Style.f32; font.weight: Style.w700 }
-                    Text { text: "Native Qt/QML is the shipping shell for production builds."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f13; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                    Text { text: "Safety gates, audit logging, restore behavior, and local-first privacy remain visible in the native Qt/QML shell."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f13; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 }
                 Column {
                     spacing: Style.s4
@@ -70,7 +70,7 @@ Flickable {
 
             GlassPanel {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 340
+                Layout.preferredHeight: 420
                 fillColor: Style.bg2
                 borderColor: Style.border1
                 ColumnLayout {
@@ -92,6 +92,16 @@ Flickable {
                         Layout.fillWidth: true
                         Text { text: "Background monitoring"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; Layout.fillWidth: true }
                         Switch { checked: UiPrefs.backgroundMonitoringEnabled; onToggled: UiPrefs.backgroundMonitoringEnabled = checked }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: "Audit logging"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; Layout.fillWidth: true }
+                        StatusPill { text: "Always on"; tone: "success" }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: "Safety gates"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; Layout.fillWidth: true }
+                        StatusPill { text: "Medium/high risk requires confirmation"; tone: "warning" }
                     }
                     RowLayout {
                         Layout.fillWidth: true
@@ -136,7 +146,7 @@ Flickable {
                             echoMode: TextInput.Password
                         }
                     }
-                    Text { text: SystemCtrl.aiCloudConfigured ? "A cloud key is already stored." : "No cloud key stored."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f12 }
+                    Text { text: (SystemCtrl.aiCloudConfigured ? "A cloud key is already stored. " : "No cloud key stored. ") + "AI remains advisory-first and cannot silently execute medium/high-risk actions."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                     GlowButton { label: "Save AI Preferences"; glowColor: Style.cyan; onClicked: SystemCtrl.setAiPreferences(root.pendingMode, apiKeyField.text) }
                 }
             }
@@ -192,17 +202,17 @@ Flickable {
                     }
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "Clean junk"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; Layout.fillWidth: true }
+                        Text { text: "Preview cleanup categories"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; Layout.fillWidth: true }
                         Switch { checked: UiPrefs.scheduleClean; onToggled: UiPrefs.scheduleClean = checked }
                     }
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "Optimize RAM"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; Layout.fillWidth: true }
+                        Text { text: "Prepare memory dry-run"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; Layout.fillWidth: true }
                         Switch { checked: UiPrefs.scheduleRam; onToggled: UiPrefs.scheduleRam = checked }
                     }
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "Flush DNS"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; Layout.fillWidth: true }
+                        Text { text: "Network diagnostics"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; Layout.fillWidth: true }
                         Switch { checked: UiPrefs.scheduleDns; onToggled: UiPrefs.scheduleDns = checked }
                     }
                     Text { text: "Scheduled task records: " + SystemCtrl.getScheduledOptimizations().length; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f11 }
@@ -245,6 +255,7 @@ Flickable {
                     spacing: Style.s12
                     Text { text: "About"; color: Style.text0; font.family: Style.fontDisplay; font.pixelSize: Style.f24; font.weight: Style.w700 }
                     Text { text: "PulseBoost AI now ships through the native Qt/QML shell backed directly by the C++ optimization core."; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; wrapMode: Text.WordWrap }
+                    Text { text: "Privacy: telemetry is local-first. No silent changes are made by AI; system-changing actions keep dry-run, confirmation, rollback, and audit visibility."; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; wrapMode: Text.WordWrap }
                     Text { text: "Deprecated UI experiments are excluded from production release builds."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f12; wrapMode: Text.WordWrap }
                 }
             }

@@ -81,7 +81,7 @@ Flickable {
                 spacing: Style.s16
                 
                 Text {
-                    text: "Health History Machine"
+                    text: "Before / After Proof"
                     color: Style.text0
                     font.family: Style.fontDisplay
                     font.pixelSize: Style.f20
@@ -124,7 +124,7 @@ Flickable {
                 Item { Layout.preferredWidth: Style.s8 }
                 
                 GlowButton {
-                    label: "Generate AI Report"
+                    label: "Export Report"
                     glowColor: Style.violet
                     variant: "solid"
                     onClicked: reportDialog.open()
@@ -136,10 +136,42 @@ Flickable {
             Layout.fillWidth: true
             spacing: Style.s16
             
-            SummaryCard { title: "Active Average"; value: Number(root.avg(root.visibleHealthSeries())).toFixed(1); accent: Style.cyan }
-            SummaryCard { title: "Peak Condition"; value: Number(root.best(root.visibleHealthSeries())).toFixed(0); accent: Style.green }
-            SummaryCard { title: "Lowest Dip"; value: Number(root.worst(root.visibleHealthSeries())).toFixed(0); accent: Style.red }
-            SummaryCard { title: "Recorded Events"; value: String(root.actions.length); accent: Style.amber }
+            SummaryCard { title: "Recoverable Storage"; value: Number(SystemCtrl.savedTodayMb || 0).toFixed(0) + " MB"; accent: Style.cyan }
+            SummaryCard { title: "Startup Items"; value: Number(SystemCtrl.startupCount || 0).toFixed(0); accent: Style.green }
+            SummaryCard { title: "Memory Pressure"; value: Number(SystemCtrl.ramUsage || 0).toFixed(0) + "%"; accent: Style.red }
+            SummaryCard { title: "Background Processes"; value: String(root.actions.length); accent: Style.amber }
+        }
+
+        GlassPanel {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 88
+            fillColor: Style.bg2
+            borderColor: Style.border1
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: Style.s16
+                spacing: Style.s12
+                Repeater {
+                    model: ["Scan", "Dry Run", "Restore Point", "Apply", "Verified Result"]
+                    delegate: Rectangle {
+                        required property string modelData
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 42
+                        radius: Style.r10
+                        color: Style.bg1
+                        border.color: Style.border1
+                        border.width: 1
+                        Text {
+                            anchors.centerIn: parent
+                            text: modelData
+                            color: Style.text1
+                            font.family: Style.fontBody
+                            font.pixelSize: Style.f12
+                            font.weight: Style.w600
+                        }
+                    }
+                }
+            }
         }
 
         GlassPanel {

@@ -20,6 +20,11 @@
         <file>ui/qml/style/Animations.qml</file>
         <file>ui/qml/style/qmldir</file>
 
+        <file>ui/qml/theme/qmldir</file>
+        <file>ui/qml/theme/Theme.qml</file>
+        <file>ui/qml/theme/Typography.qml</file>
+        <file>ui/qml/theme/Spacing.qml</file>
+
         <file>ui/qml/QtGraphicalEffects/qmldir</file>
         <file>ui/qml/QtGraphicalEffects/DropShadow.qml</file>
         <file>ui/qml/QtGraphicalEffects/RectangularGlow.qml</file>
@@ -58,6 +63,26 @@
         <file>ui/qml/components/ai/TypingIndicator.qml</file>
         <file>ui/qml/components/ai/QuickActionChips.qml</file>
         <file>ui/qml/components/ai/ContextChip.qml</file>
+
+        <file>ui/qml/components/AppCard.qml</file>
+        <file>ui/qml/components/AppSidebar.qml</file>
+        <file>ui/qml/components/SidebarItem.qml</file>
+        <file>ui/qml/components/TopStatusBar.qml</file>
+        <file>ui/qml/components/MetricCard.qml</file>
+        <file>ui/qml/components/HealthScoreRing.qml</file>
+        <file>ui/qml/components/RiskBadge.qml</file>
+        <file>ui/qml/components/ActionCard.qml</file>
+        <file>ui/qml/components/ActionDetailPanel.qml</file>
+        <file>ui/qml/components/ConfirmationDialog.qml</file>
+        <file>ui/qml/components/DryRunResultDialog.qml</file>
+        <file>ui/qml/components/AuditTable.qml</file>
+        <file>ui/qml/components/AuditDetailDrawer.qml</file>
+        <file>ui/qml/components/RestoreCard.qml</file>
+        <file>ui/qml/components/ProofComparisonCard.qml</file>
+        <file>ui/qml/components/AiRecommendationCard.qml</file>
+        <file>ui/qml/components/StatusPill.qml</file>
+        <file>ui/qml/components/EmptyState.qml</file>
+        <file>ui/qml/components/SectionHeader.qml</file>
 
         <file>ui/qml/screens/Home.qml</file>
         <file>ui/qml/screens/ActionCenter.qml</file>

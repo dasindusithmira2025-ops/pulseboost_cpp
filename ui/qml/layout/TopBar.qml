@@ -30,11 +30,16 @@ GlassPanel {
                 font.pixelSize: Style.f24
                 font.weight: Style.w700
             }
-            Text {
-                text: "PulseBoost AI"
-                color: Style.text2
-                font.family: Style.fontBody
-                font.pixelSize: Style.f11
+            Row {
+                spacing: Style.s8
+                Rectangle { width: 7; height: 7; radius: 4; color: Style.green; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: "System Protected | Last scan: live telemetry"
+                    color: Style.text2
+                    font.family: Style.fontBody
+                    font.pixelSize: Style.f11
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
         }
 

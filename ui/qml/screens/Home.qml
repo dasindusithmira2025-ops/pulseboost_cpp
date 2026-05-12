@@ -50,7 +50,7 @@ Flickable {
                     spacing: Style.s8
 
                     Text {
-                        text: "PulseScore"
+                        text: "PC Health Score"
                         color: Style.text2
                         font.family: Style.fontMono
                         font.pixelSize: Style.f11
@@ -88,8 +88,8 @@ Flickable {
                     }
                     RowLayout {
                         spacing: Style.s12
-                        GlowButton { label: "Optimize Safe"; icon: Icons.glyph("bolt"); glowColor: Style.cyan; onClicked: SystemCtrl.applyOptimizationPreset("safe-recommended") }
-                        GlowButton { label: "Boost-Up"; icon: Icons.glyph("storage"); variant: "outlined"; glowColor: Style.amber; onClicked: SystemCtrl.runClean() }
+                        GlowButton { label: "Run Safe Scan"; icon: Icons.glyph("bolt"); glowColor: Style.cyan; onClicked: SystemCtrl.refreshAll() }
+                        GlowButton { label: "Open Dry-run Review"; icon: Icons.glyph("storage"); variant: "outlined"; glowColor: Style.amber; onClicked: SystemCtrl.refreshAll() }
                         GlowButton { label: "Backup Now"; icon: Icons.glyph("history"); variant: "outlined"; glowColor: Style.green; onClicked: SystemCtrl.takeSystemSnapshot() }
                     }
                 }
@@ -294,7 +294,7 @@ Flickable {
                 }
                 Text {
                     visible: root.recent.length === 0
-                    text: "No completed actions have been recorded yet. Run Boost-Up, apply a tweak, or create a backup to populate this feed."
+                    text: "No completed actions have been recorded yet. Run a safe scan, prepare a dry-run, or create a backup to populate this feed."
                     color: Style.text2
                     font.family: Style.fontBody
                     font.pixelSize: Style.f12

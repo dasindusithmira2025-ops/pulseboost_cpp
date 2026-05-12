@@ -47,25 +47,27 @@ GlassPanel {
     function screenComponent(screenId) {
         if (screenId === "home") return homeScreen
         if (screenId === "action-center") return actionCenterScreen
-        if (screenId === "optimizations") return optimizationsScreen
+        if (screenId === "ai-advisor") return aiScreen
+        if (screenId === "before-after") return proofScreen
         if (screenId === "audit-log") return auditLogScreen
         if (screenId === "restore-center") return restoreCenterScreen
-        if (screenId === "boost") return boostScreen
-        if (screenId === "games") return gamesScreen
-        if (screenId === "ai") return aiScreen
-        if (screenId === "backup") return backupScreen
+        if (screenId === "processes") return processesScreen
+        if (screenId === "startup-apps") return startupScreen
+        if (screenId === "storage-cleanup") return storageScreen
+        if (screenId === "network-tools") return networkScreen
         if (screenId === "settings") return settingsScreen
         return homeScreen
     }
 
     Component { id: homeScreen; Home {} }
     Component { id: actionCenterScreen; ActionCenter {} }
-    Component { id: optimizationsScreen; Optimizations {} }
+    Component { id: proofScreen; HealthHistory {} }
     Component { id: auditLogScreen; AuditLog {} }
     Component { id: restoreCenterScreen; RestoreCenter {} }
-    Component { id: boostScreen; BoostUp {} }
-    Component { id: gamesScreen; Games {} }
     Component { id: aiScreen; AiChat {} }
-    Component { id: backupScreen; Backup {} }
+    Component { id: processesScreen; ProcessManager {} }
+    Component { id: startupScreen; StartupManager {} }
+    Component { id: storageScreen; StorageAnalyzer {} }
+    Component { id: networkScreen; NetworkMonitor {} }
     Component { id: settingsScreen; Settings {} }
 }

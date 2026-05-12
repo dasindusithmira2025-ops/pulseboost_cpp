@@ -16,8 +16,7 @@ Flickable {
     property bool descending: true
     property string query: ""
     property var rows: []
-    property bool autoKillEnabled: false
-    property real autoKillThreshold: 92
+    property var pendingProcess: null
 
     function refreshRows() {
         const baseRows = SystemCtrl.sortedProcesses(sortKey, descending)
@@ -48,21 +47,6 @@ Flickable {
     Connections {
         target: SystemCtrl
         function onProcessListChanged() { root.refreshRows() }
-    }
-
-    Timer {
-        interval: 2500
-        running: root.autoKillEnabled
-        repeat: true
-        onTriggered: {
-            for (let i = 0; i < root.rows.length; i += 1) {
-                const row = root.rows[i]
-                if (!row.isCritical && Number(row.cpuPercent) >= root.autoKillThreshold) {
-                    SystemCtrl.killProcess(row.pid)
-                    break
-                }
-            }
-        }
     }
 
     ColumnLayout {
@@ -137,20 +121,13 @@ Flickable {
                     }
 
                     RowLayout {
-                        spacing: Style.s12
-                        Rectangle {
-                            width: 1; height: 24; color: Style.border1
-                        }
-                        Text { text: "Auto-KIll >="; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f12 }
-                        Text { text: Number(root.autoKillThreshold).toFixed(0) + "%"; color: Style.amber; font.family: Style.fontMono; font.pixelSize: Style.f12; font.weight: Style.w600 }
-                        Slider {
-                            from: 70; to: 100; value: root.autoKillThreshold
-                            Layout.preferredWidth: 120
-                            onValueChanged: root.autoKillThreshold = value
-                        }
-                        Switch {
-                            checked: root.autoKillEnabled
-                            onToggled: root.autoKillEnabled = checked
+                        spacing: Style.s8
+                        Rectangle { width: 8; height: 8; radius: 4; color: Style.red; anchors.verticalCenter: parent.verticalCenter }
+                        Text {
+                            text: "End Process is High Risk and requires manual confirmation."
+                            color: Style.text2
+                            font.family: Style.fontBody
+                            font.pixelSize: Style.f12
                         }
                     }
                 }
@@ -173,7 +150,7 @@ Flickable {
                 HeaderCell { label: "RAM USAGE"; widthPx: 100; onPressed: sort("ram") }
                 HeaderCell { label: "RISK LEVEL"; widthPx: 120; onPressed: sort("cpu") }
                 HeaderCell { label: "SUSPEND"; widthPx: 110; onPressed: sort("cpu") }
-                HeaderCell { label: "TERMINATE"; widthPx: 110; onPressed: sort("cpu") }
+                HeaderCell { label: "HIGH RISK"; widthPx: 132; onPressed: sort("cpu") }
             }
         }
 
@@ -276,13 +253,16 @@ Flickable {
                     }
 
                     GlowButton {
-                        Layout.preferredWidth: 110
                         Layout.alignment: Qt.AlignVCenter
-                        label: modelData.isCritical ? "System" : "Kill"
+                        Layout.preferredWidth: 132
+                        label: modelData.isCritical ? "System" : "End Process"
                         variant: "outlined"
                         glowColor: modelData.isCritical ? Style.border1 : Style.red
                         enabled: !modelData.isCritical
-                        onClicked: SystemCtrl.killProcess(modelData.pid)
+                        onClicked: {
+                            root.pendingProcess = modelData
+                            endProcessDialog.open()
+                        }
                     }
                 }
             }
@@ -301,6 +281,48 @@ Flickable {
         if (root.sortKey === key) root.descending = !root.descending
         else { root.sortKey = key; root.descending = true }
         root.refreshRows()
+    }
+
+    Dialog {
+        id: endProcessDialog
+        modal: true
+        title: "Confirm High-Risk Process Action"
+        standardButtons: Dialog.Cancel
+        width: 480
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: Style.s12
+            Text {
+                text: root.pendingProcess ? root.pendingProcess.name : "Process"
+                color: Style.text0
+                font.family: Style.fontDisplay
+                font.pixelSize: Style.f20
+                font.weight: Style.w700
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+            }
+            Text {
+                text: "Ending a process can cause data loss or application instability. PulseBoost will keep the action gated and audited by the backend safety policy."
+                color: Style.text2
+                font.family: Style.fontBody
+                font.pixelSize: Style.f13
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Item { Layout.fillWidth: true }
+                GlowButton {
+                    label: "Confirm End Process"
+                    glowColor: Style.red
+                    variant: "outlined"
+                    onClicked: {
+                        if (root.pendingProcess) SystemCtrl.killProcess(root.pendingProcess.pid)
+                        endProcessDialog.close()
+                    }
+                }
+            }
+        }
     }
 
     component HeaderCell: Item {

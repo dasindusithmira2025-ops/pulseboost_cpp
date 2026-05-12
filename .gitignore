@@ -31,6 +31,10 @@ __pycache__/
 *.pyc
 data/snapshots/
 data/tauri_snapshots/
+design-reference/
+node_modules/
+dist/
+.vite/
 
 # Deprecated Tauri/React frontend is not part of production release builds.
 tauri_ui/

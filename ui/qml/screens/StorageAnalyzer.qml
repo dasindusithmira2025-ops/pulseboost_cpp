@@ -60,12 +60,10 @@ Flickable {
                     onClicked: root.largeFiles = SystemCtrl.findLargeFiles()
                 }
                 GlowButton {
-                    label: "Clean System Junk"
+                    label: "Preview Cleanup"
                     glowColor: Style.cyan
-                    onClicked: {
-                        SystemCtrl.runClean()
-                        root.cleanDeltaMb = SystemCtrl.savedTodayMb
-                    }
+                    variant: "outlined"
+                    onClicked: root.largeFiles = SystemCtrl.findLargeFiles()
                 }
             }
         }
@@ -248,7 +246,7 @@ Flickable {
                                 width: parent.width
                                 spacing: Style.s10
                                 Text {
-                                    text: root.selectedNode ? ("Occupies " + Number(root.selectedNode.fraction * 100).toFixed(1) + "% of analyzed volume.") : "Click any sector on the left to drill down into its total physical footprint."
+                        text: root.selectedNode ? ("Occupies " + Number(root.selectedNode.fraction * 100).toFixed(1) + "% of analyzed volume.") : "Cleanup is preview-first. Use Action Center for dry-run, quarantine, confirmation, and rollback visibility."
                                     color: Style.text2
                                     font.family: Style.fontBody
                                     font.pixelSize: Style.f12

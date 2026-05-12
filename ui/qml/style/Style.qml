@@ -4,12 +4,12 @@ import QtQuick 2.15
 QtObject {
     property bool isDark: true
 
-    readonly property color bg0: "#030407"
-    readonly property color bg1: "#070A11"
-    readonly property color bg2: "#0C111A"
-    readonly property color bg3: "#131926"
-    readonly property color bg4: "#1C2536"
-    readonly property color bg5: "#28354A"
+    readonly property color bg0: "#0A0E1A"
+    readonly property color bg1: "#0F1220"
+    readonly property color bg2: "#13172B"
+    readonly property color bg3: "#1E2338"
+    readonly property color bg4: "#273049"
+    readonly property color bg5: "#313B58"
 
     readonly property color glassCard: "#660C111A"
     readonly property color glassPanel: "#88070A11"
@@ -22,16 +22,16 @@ QtObject {
     readonly property color borderGlass: "#33FFFFFF"
     readonly property color borderAccentSoft: "#441AC8FF"
 
-    readonly property color text0: "#FFFFFF"
-    readonly property color text1: "#E2E8F0"
-    readonly property color text2: "#94A3B8"
-    readonly property color text3: "#64748B"
+    readonly property color text0: "#E8EAED"
+    readonly property color text1: "#D6DBE7"
+    readonly property color text2: "#8B92A8"
+    readonly property color text3: "#687087"
 
-    readonly property color violet: "#8A5AFF"
-    readonly property color cyan: "#00E5FF"
-    readonly property color green: "#00E676"
-    readonly property color amber: "#FFC400"
-    readonly property color red: "#FF1744"
+    readonly property color violet: "#A78BFA"
+    readonly property color cyan: "#00D9FF"
+    readonly property color green: "#00FF88"
+    readonly property color amber: "#FFB800"
+    readonly property color red: "#FF4757"
     readonly property color magenta: "#F50057"
 
     readonly property color violetGlow: "#228A5AFF"
@@ -110,7 +110,7 @@ QtObject {
     readonly property real r24: 24
     readonly property real r999: 999
 
-    readonly property real sidebarW: 244
+    readonly property real sidebarW: 256
     readonly property real sidebarCol: 80
     readonly property real topbarH: 56
     readonly property real statusH: 28

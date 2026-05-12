@@ -14,12 +14,39 @@ Flickable {
     property bool confirmed: false
     property var actions: SystemCtrl.actionCenterActions
     property var proof: SystemCtrl.latestProofReport
+    property string currentFilter: "safe"
+    property var selectedAction: actions && actions.length > 0 ? actions[0] : null
 
     function riskColor(risk) {
         if (risk === "critical" || risk === "high") return Style.red
         if (risk === "moderate") return Style.amber
         if (risk === "low") return Style.green
         return Style.cyan
+    }
+
+    function filterLabel(filterId) {
+        if (filterId === "safe") return "Safe"
+        if (filterId === "manual") return "Manual"
+        if (filterId === "advanced") return "Advanced"
+        return "High Risk"
+    }
+
+    function matchesFilter(action) {
+        const risk = String(action.riskLevel || "").toLowerCase()
+        const confirmation = String(action.requiredConfirmation || "").toLowerCase()
+        if (currentFilter === "safe") return risk === "safe" || risk === "low"
+        if (currentFilter === "manual") return confirmation.indexOf("manual") !== -1 || risk.indexOf("moderate") !== -1 || risk.indexOf("medium") !== -1
+        if (currentFilter === "advanced") return confirmation.indexOf("advanced") !== -1 || risk.indexOf("manual") !== -1
+        return risk.indexOf("high") !== -1 || risk.indexOf("critical") !== -1
+    }
+
+    function filteredActions() {
+        const result = []
+        if (!actions) return result
+        for (let i = 0; i < actions.length; i += 1) {
+            if (matchesFilter(actions[i])) result.push(actions[i])
+        }
+        return result
     }
 
     ColumnLayout {
@@ -67,6 +94,69 @@ Flickable {
                         }
                         Text { text: "Manual confirmation"; color: Style.text0; font.family: Style.fontBody; font.pixelSize: Style.f13; font.weight: Style.w600 }
                     }
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Style.s10
+            Repeater {
+                model: ["safe", "manual", "advanced", "high"]
+                delegate: Rectangle {
+                    required property string modelData
+                    Layout.preferredWidth: 140
+                    Layout.preferredHeight: 38
+                    radius: Style.r10
+                    color: root.currentFilter === modelData ? Style.cyan : Style.bg2
+                    border.color: root.currentFilter === modelData ? Style.cyan : Style.border1
+                    border.width: 1
+                    Text {
+                        anchors.centerIn: parent
+                        text: root.filterLabel(modelData)
+                        color: root.currentFilter === modelData ? Style.bg0 : Style.text1
+                        font.family: Style.fontBody
+                        font.pixelSize: Style.f13
+                        font.weight: Style.w600
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.currentFilter = modelData
+                    }
+                }
+            }
+            Item { Layout.fillWidth: true }
+        }
+
+        GlassPanel {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 154
+            fillColor: Style.bg2
+            borderColor: Style.border1
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: Style.cardPad
+                spacing: Style.s8
+                SectionHeader {
+                    Layout.fillWidth: true
+                    title: "Selected Action Safety Review"
+                    subtitle: root.selectedAction ? root.selectedAction.name : "Select an action to review impact, dry-run evidence, confirmation, and rollback."
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Style.s10
+                    StatusPill { text: root.selectedAction ? String(root.selectedAction.riskLevel).toUpperCase() : "MANUAL"; tone: root.selectedAction ? root.selectedAction.riskTone : "warning" }
+                    StatusPill { text: root.selectedAction && root.selectedAction.dryRunSupported ? "Dry-run required" : "Review required"; tone: root.selectedAction && root.selectedAction.dryRunSupported ? "success" : "warning" }
+                    StatusPill { text: root.selectedAction && root.selectedAction.rollbackAvailable ? "Rollback available" : "Restore point recommended"; tone: root.selectedAction && root.selectedAction.rollbackAvailable ? "success" : "warning" }
+                }
+                Text {
+                    text: root.selectedAction ? ("What will change: " + root.selectedAction.expectedEffect + " | Policy gate: " + root.selectedAction.requiredConfirmation + " | Backup/restore: " + root.selectedAction.backupRestoreAvailability) : "No action selected."
+                    color: Style.text2
+                    font.family: Style.fontBody
+                    font.pixelSize: Style.f12
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
                 }
             }
         }
@@ -120,7 +210,7 @@ Flickable {
             Layout.fillWidth: true
             spacing: Style.s12
             Repeater {
-                model: root.actions
+                model: root.filteredActions()
                 delegate: GlassPanel {
                     required property var modelData
                     Layout.fillWidth: true
@@ -151,7 +241,8 @@ Flickable {
                             Layout.preferredWidth: 150
                             spacing: Style.s8
                             GlowButton { Layout.fillWidth: true; label: "Dry Run"; glowColor: Style.cyan; variant: "outlined"; onClicked: SystemCtrl.dryRunOptimizationAction(modelData.actionId) }
-                            GlowButton { Layout.fillWidth: true; label: "Execute"; enabled: modelData.canExecuteFromCenter; glowColor: root.riskColor(modelData.riskLevel); onClicked: SystemCtrl.executeOptimizationAction(modelData.actionId, root.confirmed) }
+                            GlowButton { Layout.fillWidth: true; label: "Review"; variant: "outlined"; glowColor: Style.amber; onClicked: root.selectedAction = modelData }
+                            GlowButton { Layout.fillWidth: true; label: "Apply"; enabled: modelData.canExecuteFromCenter; glowColor: root.riskColor(modelData.riskLevel); onClicked: SystemCtrl.executeOptimizationAction(modelData.actionId, root.confirmed) }
                         }
                     }
                 }

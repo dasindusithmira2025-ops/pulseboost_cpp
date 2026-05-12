@@ -43,8 +43,8 @@ Item {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: Style.s6
-                    Text { text: "AI"; color: Style.text0; font.family: Style.fontDisplay; font.pixelSize: Style.f32; font.weight: Style.w700 }
-                    Text { text: "PulseBoost AI explains what is happening on this PC and can trigger native optimization routines."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f13; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                    Text { text: "AI Advisor"; color: Style.text0; font.family: Style.fontDisplay; font.pixelSize: Style.f32; font.weight: Style.w700 }
+                    Text { text: "AI Advisory Mode: AI can recommend actions and prepare dry-runs, but medium/high-risk actions require confirmation."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f13; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 }
                 Column {
                     spacing: Style.s4
@@ -91,7 +91,7 @@ Item {
             visible: chatModel.count === 0
             Text {
                 anchors.centerIn: parent
-                text: "Try: Analyze current bottlenecks | Optimize RAM | Explain my health score"
+                text: "Try: Analyze current bottlenecks | Prepare a safe dry-run | Explain my health score"
                 color: Style.text2
                 font.family: Style.fontBody
                 font.pixelSize: Style.f12

@@ -17,15 +17,16 @@ GlassPanel {
     signal collapseToggled()
 
     readonly property var navItems: [
-        { "id": "home", "label": "Home", "icon": "dashboard" },
+        { "id": "home", "label": "Overview", "icon": "dashboard" },
         { "id": "action-center", "label": "Action Center", "icon": "bolt" },
-        { "id": "optimizations", "label": "Optimizations", "icon": "bolt" },
+        { "id": "ai-advisor", "label": "AI Advisor", "icon": "chat" },
+        { "id": "before-after", "label": "Before / After Proof", "icon": "history" },
         { "id": "audit-log", "label": "Audit Log", "icon": "history" },
-        { "id": "restore-center", "label": "Restore", "icon": "history" },
-        { "id": "boost", "label": "Boost-Up", "icon": "storage" },
-        { "id": "games", "label": "Games", "icon": "game" },
-        { "id": "ai", "label": "AI", "icon": "chat" },
-        { "id": "backup", "label": "Backup", "icon": "history" },
+        { "id": "restore-center", "label": "Restore Center", "icon": "history" },
+        { "id": "processes", "label": "Processes", "icon": "settings" },
+        { "id": "startup-apps", "label": "Startup Apps", "icon": "storage" },
+        { "id": "storage-cleanup", "label": "Storage Cleanup", "icon": "storage" },
+        { "id": "network-tools", "label": "Network Tools", "icon": "settings" },
         { "id": "settings", "label": "Settings", "icon": "settings" }
     ]
 
@@ -64,7 +65,7 @@ GlassPanel {
                     font.weight: Style.w700
                 }
                 Text {
-                    text: "Native Performance Suite"
+                    text: "Windows-native safety suite"
                     color: Style.text2
                     font.family: Style.fontBody
                     font.pixelSize: Style.f11
@@ -190,7 +191,7 @@ GlassPanel {
                     font.pixelSize: Style.f10
                 }
                 Text {
-                    text: SystemCtrl.aiMode === "cloud" ? "Cloud ready" : "Local ready"
+                    text: SystemCtrl.aiMode === "cloud" ? "Cloud advisory" : "Local advisory"
                     color: Style.text0
                     font.family: Style.fontBody
                     font.pixelSize: Style.f13
@@ -198,7 +199,7 @@ GlassPanel {
                 }
                 Text {
                     visible: !root.collapsed
-                    text: SystemCtrl.aiCloudConfigured ? "Cloud key stored" : "Private local mode"
+                    text: SystemCtrl.aiCloudConfigured ? "AI can advise only" : "Private local mode"
                     color: Style.text2
                     font.family: Style.fontBody
                     font.pixelSize: Style.f11

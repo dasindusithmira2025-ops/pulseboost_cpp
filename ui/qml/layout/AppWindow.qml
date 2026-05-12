@@ -28,36 +28,6 @@ ApplicationWindow {
     Rectangle {
         anchors.fill: parent
         color: Style.bg0
-
-        // Ambient background glowing orbs to give glassmorphism something to refract
-        Rectangle {
-            width: 800; height: 800
-            radius: 400
-            color: Style.violetGlow
-            opacity: 0.3
-            x: -200; y: -200
-            
-            SequentialAnimation on x {
-                loops: Animation.Infinite
-                NumberAnimation { to: 0; duration: 24000; easing.type: Animations.easeInOut }
-                NumberAnimation { to: -200; duration: 24000; easing.type: Animations.easeInOut }
-            }
-        }
-        
-        Rectangle {
-            width: 1000; height: 1000
-            radius: 500
-            color: Style.cyanGlow
-            opacity: 0.2
-            x: parent.width - 600
-            y: parent.height - 400
-            
-            SequentialAnimation on y {
-                loops: Animation.Infinite
-                NumberAnimation { to: parent.height - 800; duration: 28000; easing.type: Animations.easeInOut }
-                NumberAnimation { to: parent.height - 400; duration: 28000; easing.type: Animations.easeInOut }
-            }
-        }
     }
 
     RowLayout {
@@ -256,12 +226,16 @@ ApplicationWindow {
     function checkScheduledTasks() {}
 
     function screenTitle(screenId) {
-        if (screenId === "home") return "Home"
-        if (screenId === "optimizations") return "Optimizations"
-        if (screenId === "boost") return "Boost-Up"
-        if (screenId === "games") return "Games"
-        if (screenId === "ai") return "AI"
-        if (screenId === "backup") return "Backup"
+        if (screenId === "home") return "Overview"
+        if (screenId === "action-center") return "Action Center"
+        if (screenId === "ai-advisor") return "AI Advisor"
+        if (screenId === "before-after") return "Before / After Proof"
+        if (screenId === "audit-log") return "Audit Log"
+        if (screenId === "restore-center") return "Restore Center"
+        if (screenId === "processes") return "Processes"
+        if (screenId === "startup-apps") return "Startup Apps"
+        if (screenId === "storage-cleanup") return "Storage Cleanup"
+        if (screenId === "network-tools") return "Network Tools"
         if (screenId === "settings") return "Settings"
         return "PulseBoost AI"
     }

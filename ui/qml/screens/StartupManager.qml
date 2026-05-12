@@ -15,6 +15,8 @@ Flickable {
 
     property var items: []
     property var displayRows: []
+    property var pendingStartupItem: null
+    property string pendingStartupAction: ""
 
     function categoryFor(item) {
         const lower = String(item.name).toLowerCase()
@@ -62,16 +64,6 @@ Flickable {
         rebuildGroups()
     }
 
-    function delayNonEssential() {
-        for (let i = 0; i < root.items.length; i += 1) {
-            const item = root.items[i]
-            if (categoryFor(item).indexOf("System") === -1 && item.enabled) {
-                SystemCtrl.delayStartupItem(item.name, item.location, item.command, 10)
-            }
-        }
-        refresh()
-    }
-
     Component.onCompleted: refresh()
 
     ColumnLayout {
@@ -104,16 +96,16 @@ Flickable {
                     }
                     Item { Layout.fillWidth: true }
                     GlowButton {
-                        label: "Delay Non-Essential"
+                        label: "Preview Non-Essential"
                         variant: "outlined"
                         glowColor: Style.amber
-                        onClicked: root.delayNonEssential()
+                        onClicked: root.refresh()
                     }
                     GlowButton {
-                        label: "Calculate Optimized"
+                        label: "Calculate Impact"
                         variant: "outlined"
                         glowColor: Style.violet
-                        onClicked: root.delayNonEssential()
+                        onClicked: root.refresh()
                     }
                     GlowButton {
                         label: "Rescan Environment"
@@ -146,7 +138,7 @@ Flickable {
                     Rectangle { width: 1; height: 16; color: Style.border1; anchors.verticalCenter: parent.verticalCenter }
                     
                     Text {
-                        text: "Hardened Profile Estimate:"
+                        text: "Preview Profile Estimate:"
                         color: Style.text2
                         font.family: Style.fontMono
                         font.pixelSize: Style.f11
@@ -162,8 +154,8 @@ Flickable {
                     }
 
                     Item { Layout.fillWidth: true }
-                    Text {
-                        text: root.items.length + " active injection entries"
+                        Text {
+                            text: root.items.length + " startup entries | rollback visible after changes"
                         color: Style.text2
                         font.family: Style.fontMono
                         font.pixelSize: Style.f12
@@ -294,8 +286,9 @@ Flickable {
                         variant: "outlined"
                         glowColor: Style.amber
                         onClicked: {
-                            SystemCtrl.delayStartupItem(item.name, item.location, item.command, 10)
-                            root.refresh()
+                            root.pendingStartupItem = item
+                            root.pendingStartupAction = "delay"
+                            startupConfirmDialog.open()
                         }
                     }
 
@@ -305,9 +298,59 @@ Flickable {
                         variant: "outlined"
                         glowColor: Style.red
                         onClicked: {
-                            SystemCtrl.disableStartupItem(item.name, item.location, item.command)
+                            root.pendingStartupItem = item
+                            root.pendingStartupAction = "disable"
+                            startupConfirmDialog.open()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Dialog {
+        id: startupConfirmDialog
+        modal: true
+        title: "Confirm Startup Change"
+        standardButtons: Dialog.Cancel
+        width: 500
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: Style.s12
+            Text {
+                text: root.pendingStartupItem ? root.pendingStartupItem.name : "Startup item"
+                color: Style.text0
+                font.family: Style.fontDisplay
+                font.pixelSize: Style.f20
+                font.weight: Style.w700
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+            }
+            Text {
+                text: "Startup changes are reversible and audited. Review publisher, path, impact, and rollback availability before confirming."
+                color: Style.text2
+                font.family: Style.fontBody
+                font.pixelSize: Style.f13
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Item { Layout.fillWidth: true }
+                GlowButton {
+                    label: root.pendingStartupAction === "delay" ? "Confirm Delay" : "Confirm Disable"
+                    glowColor: root.pendingStartupAction === "delay" ? Style.amber : Style.red
+                    variant: "outlined"
+                    onClicked: {
+                        if (root.pendingStartupItem) {
+                            if (root.pendingStartupAction === "delay") {
+                                SystemCtrl.delayStartupItem(root.pendingStartupItem.name, root.pendingStartupItem.location, root.pendingStartupItem.command, 10)
+                            } else {
+                                SystemCtrl.disableStartupItem(root.pendingStartupItem.name, root.pendingStartupItem.location, root.pendingStartupItem.command)
+                            }
                             root.refresh()
                         }
+                        startupConfirmDialog.close()
                     }
                 }
             }

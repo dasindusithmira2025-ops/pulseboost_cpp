@@ -12,8 +12,22 @@ Flickable {
     contentHeight: contentColumn.implicitHeight + Style.pagePad * 2
 
     property var entries: SystemCtrl.auditLogEntries
+    property string query: ""
+    property var selectedEntry: entries && entries.length > 0 ? entries[0] : null
 
     Component.onCompleted: SystemCtrl.refreshAuditLog()
+
+    function filteredEntries() {
+        const result = []
+        const needle = query.toLowerCase()
+        if (!entries) return result
+        for (let i = 0; i < entries.length; i += 1) {
+            const row = entries[i]
+            const text = String(row.createdAt + " " + row.actionType + " " + row.riskLevel + " " + row.summary).toLowerCase()
+            if (needle === "" || text.indexOf(needle) !== -1) result.push(row)
+        }
+        return result
+    }
 
     ColumnLayout {
         id: contentColumn
@@ -41,17 +55,49 @@ Flickable {
             }
         }
 
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Style.s12
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 40
+                radius: Style.r10
+                color: Style.bg2
+                border.color: Style.border1
+                border.width: 1
+                TextField {
+                    anchors.fill: parent
+                    anchors.leftMargin: Style.s12
+                    anchors.rightMargin: Style.s12
+                    background: null
+                    color: Style.text0
+                    placeholderText: "Search audit entries by action, risk, result, or time"
+                    placeholderTextColor: Style.text3
+                    font.family: Style.fontBody
+                    font.pixelSize: Style.f13
+                    onTextChanged: root.query = text
+                }
+            }
+            StatusPill { text: "Audit visible"; tone: "success" }
+            StatusPill { text: "Rollback tracked"; tone: "neutral" }
+            StatusPill { text: "Confirmation logged"; tone: "warning" }
+        }
+
         GlassPanel {
             Layout.fillWidth: true
-            Layout.preferredHeight: Math.max(360, root.entries.length * 54 + 88)
+            Layout.preferredHeight: Math.max(430, root.filteredEntries().length * 54 + 104)
             fillColor: Style.bg2
             borderColor: Style.border1
-            ColumnLayout {
+            RowLayout {
                 anchors.fill: parent
                 anchors.margins: Style.cardPad
-                spacing: Style.s10
-                SectionHeader { Layout.fillWidth: true; title: "System-Changing Actions"; subtitle: Number(root.entries.length).toFixed(0) + " entries loaded from action_audit_log" }
-                Rectangle {
+                spacing: Style.s16
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    spacing: Style.s10
+                    SectionHeader { Layout.fillWidth: true; title: "System-Changing Actions"; subtitle: Number(root.filteredEntries().length).toFixed(0) + " visible entries loaded from action_audit_log" }
+                    Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 34
                     radius: Style.r8
@@ -69,27 +115,47 @@ Flickable {
                         Text { text: "Summary"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.fillWidth: true }
                     }
                 }
-                Repeater {
-                    model: root.entries
-                    delegate: Rectangle {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 46
-                        radius: Style.r8
-                        color: Style.bg1
-                        border.color: Style.border1
-                        border.width: 1
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: Style.s10
-                            anchors.rightMargin: Style.s10
-                            spacing: Style.s10
-                            Text { text: modelData.createdAt; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.preferredWidth: 156; elide: Text.ElideRight }
-                            Text { text: modelData.actionType; color: Style.text0; font.family: Style.fontBody; font.pixelSize: Style.f12; font.weight: Style.w600; Layout.preferredWidth: 170; elide: Text.ElideRight }
-                            StatusPill { text: String(modelData.riskLevel).toUpperCase(); tone: modelData.riskLevel === "high" || modelData.riskLevel === "critical" ? "error" : (modelData.riskLevel === "moderate" ? "warning" : "success") }
-                            Text { text: modelData.dryRun ? "Dry-run" : "Live"; color: modelData.dryRun ? Style.cyan : Style.amber; font.family: Style.fontMono; font.pixelSize: Style.f11; Layout.preferredWidth: 70 }
-                            Text { text: modelData.summary; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f12; Layout.fillWidth: true; elide: Text.ElideRight }
+                    Repeater {
+                        model: root.filteredEntries()
+                        delegate: Rectangle {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 46
+                            radius: Style.r8
+                            color: root.selectedEntry === modelData ? Style.bg3 : Style.bg1
+                            border.color: root.selectedEntry === modelData ? Style.cyan : Style.border1
+                            border.width: 1
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: Style.s10
+                                anchors.rightMargin: Style.s10
+                                spacing: Style.s10
+                                Text { text: modelData.createdAt; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.preferredWidth: 156; elide: Text.ElideRight }
+                                Text { text: modelData.actionType; color: Style.text0; font.family: Style.fontBody; font.pixelSize: Style.f12; font.weight: Style.w600; Layout.preferredWidth: 170; elide: Text.ElideRight }
+                                StatusPill { text: String(modelData.riskLevel).toUpperCase(); tone: modelData.riskLevel === "high" || modelData.riskLevel === "critical" ? "error" : (modelData.riskLevel === "moderate" ? "warning" : "success") }
+                                Text { text: modelData.dryRun ? "Dry-run" : "Live"; color: modelData.dryRun ? Style.cyan : Style.amber; font.family: Style.fontMono; font.pixelSize: Style.f11; Layout.preferredWidth: 70 }
+                                Text { text: modelData.summary; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f12; Layout.fillWidth: true; elide: Text.ElideRight }
+                            }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.selectedEntry = modelData }
                         }
+                    }
+                }
+                GlassPanel {
+                    Layout.preferredWidth: 300
+                    Layout.fillHeight: true
+                    fillColor: Style.bg1
+                    borderColor: Style.border1
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Style.s14
+                        spacing: Style.s10
+                        SectionHeader { Layout.fillWidth: true; title: "Details"; subtitle: root.selectedEntry ? root.selectedEntry.actionType : "Select an audit row" }
+                        StatusPill { text: root.selectedEntry ? String(root.selectedEntry.riskLevel).toUpperCase() : "REVIEW"; tone: root.selectedEntry && (root.selectedEntry.riskLevel === "high" || root.selectedEntry.riskLevel === "critical") ? "error" : "neutral" }
+                        Text { text: "Human explanation"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; font.weight: Style.w600 }
+                        Text { text: root.selectedEntry ? root.selectedEntry.summary : "No entry selected."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                        Text { text: "Technical summary"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; font.weight: Style.w600 }
+                        Text { text: root.selectedEntry ? ("Time: " + root.selectedEntry.createdAt + "\nMode: " + (root.selectedEntry.dryRun ? "Dry-run" : "Live") + "\nSafety policy result: recorded in audit log") : "--"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                        Text { text: "Affected paths/settings are shown when supplied by the backend payload."; color: Style.text3; font.family: Style.fontBody; font.pixelSize: Style.f11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                     }
                 }
             }

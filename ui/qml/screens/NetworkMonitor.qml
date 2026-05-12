@@ -267,28 +267,24 @@ Flickable {
                 spacing: Style.s16
                 
                 GlowButton {
-                    Layout.preferredWidth: 160
-                    label: "Flush DNS Cache"
+                    Layout.preferredWidth: 180
+                    label: "Run Diagnostics"
                     glowColor: Style.cyan
                     onClicked: {
-                        SystemCtrl.flushDns()
                         root.latency = SystemCtrl.checkLatency()
                         root.overview = SystemCtrl.networkOverview
                     }
                 }
                 GlowButton {
-                    Layout.preferredWidth: 160
-                    label: "Optimize TCP Stack"
+                    Layout.preferredWidth: 220
+                    label: "TCP Change: Manual Review"
                     glowColor: Style.violet
-                    onClicked: {
-                        SystemCtrl.optimizeTcp()
-                        root.latency = SystemCtrl.checkLatency()
-                        root.overview = SystemCtrl.networkOverview
-                    }
+                    variant: "outlined"
+                    enabled: false
                 }
                 GlowButton {
                     Layout.preferredWidth: 160
-                    label: "Recalibrate Ping"
+                    label: "Recheck Latency"
                     variant: "outlined"
                     glowColor: Style.amber
                     onClicked: {
