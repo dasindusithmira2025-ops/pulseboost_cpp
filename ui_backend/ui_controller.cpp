@@ -945,33 +945,39 @@ QVariantList UiController::actionCenterActions() const {
 QVariantList UiController::auditLogEntries() const {
     QVariantList entries;
     const QString connectionName = QStringLiteral("pulseboost_ui_audit_%1").arg(reinterpret_cast<quintptr>(this));
-    QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName);
-    db.setDatabaseName(pulseBoostDatabasePath());
-    if (!db.open()) {
-        QSqlDatabase::removeDatabase(connectionName);
-        return entries;
-    }
-
-    QSqlQuery query(db);
-    if (query.exec(QStringLiteral(
-            "SELECT id, created_at, action_type, status, summary, risk_level, dry_run, request_json, result_json "
-            "FROM action_audit_log ORDER BY id DESC LIMIT 250"))) {
-        while (query.next()) {
-            QVariantMap row;
-            row["id"] = query.value(0).toLongLong();
-            row["createdAt"] = query.value(1).toString();
-            row["actionType"] = query.value(2).toString();
-            row["status"] = query.value(3).toString();
-            row["summary"] = query.value(4).toString();
-            row["riskLevel"] = query.value(5).toString();
-            row["dryRun"] = query.value(6).toInt() != 0;
-            row["requestJson"] = query.value(7).toString();
-            row["resultJson"] = query.value(8).toString();
-            row["tone"] = row.value("status").toString() == QStringLiteral("success") ? QStringLiteral("success") : QStringLiteral("warning");
-            entries.push_back(row);
+    {
+        QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName);
+        db.setDatabaseName(pulseBoostDatabasePath());
+        if (!db.open()) {
+            db.close();
+            db = QSqlDatabase();
+            QSqlDatabase::removeDatabase(connectionName);
+            return entries;
         }
+
+        {
+            QSqlQuery query(db);
+            if (query.exec(QStringLiteral(
+                    "SELECT id, created_at, action_type, status, summary, risk_level, dry_run, request_json, result_json "
+                    "FROM action_audit_log ORDER BY id DESC LIMIT 250"))) {
+                while (query.next()) {
+                    QVariantMap row;
+                    row["id"] = query.value(0).toLongLong();
+                    row["createdAt"] = query.value(1).toString();
+                    row["actionType"] = query.value(2).toString();
+                    row["status"] = query.value(3).toString();
+                    row["summary"] = query.value(4).toString();
+                    row["riskLevel"] = query.value(5).toString();
+                    row["dryRun"] = query.value(6).toInt() != 0;
+                    row["requestJson"] = query.value(7).toString();
+                    row["resultJson"] = query.value(8).toString();
+                    row["tone"] = row.value("status").toString() == QStringLiteral("success") ? QStringLiteral("success") : QStringLiteral("warning");
+                    entries.push_back(row);
+                }
+            }
+        }
+        db.close();
     }
-    db.close();
     QSqlDatabase::removeDatabase(connectionName);
     return entries;
 }

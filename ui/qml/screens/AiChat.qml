@@ -54,6 +54,58 @@ Item {
             }
         }
 
+        GlassPanel {
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.min(260, Math.max(128, SystemCtrl.advisorItems.length * 84 + 72))
+            fillColor: Style.bg2
+            borderColor: Style.border1
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: Style.cardPad
+                spacing: Style.s10
+                SectionHeader {
+                    Layout.fillWidth: true
+                    title: "Backend Recommendations"
+                    subtitle: SystemCtrl.advisorItems.length > 0 ? "Recommendations generated from current telemetry and native advisor rules." : "No AI advisor recommendations are available from the backend right now."
+                }
+                Repeater {
+                    model: Math.min(3, SystemCtrl.advisorItems.length)
+                    delegate: Rectangle {
+                        required property int index
+                        property var item: SystemCtrl.advisorItems[index]
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 64
+                        radius: Style.r10
+                        color: Style.bg1
+                        border.color: Style.border1
+                        border.width: 1
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: Style.s12
+                            anchors.rightMargin: Style.s12
+                            spacing: Style.s12
+                            StatusPill { text: String(item.impact || "review").toUpperCase(); tone: item.impact === "high" ? "error" : (item.impact === "medium" ? "warning" : "success") }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 1
+                                Text { text: item.title || "Recommendation"; color: Style.text0; font.family: Style.fontBody; font.pixelSize: Style.f13; font.weight: Style.w600; Layout.fillWidth: true; elide: Text.ElideRight }
+                                Text { text: "Reason/evidence: " + (item.description || item.status || "Backend did not include additional evidence."); color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f11; Layout.fillWidth: true; elide: Text.ElideRight }
+                                Text { text: "Confidence: " + (item.actionable ? "Actionable backend recommendation" : "Informational") + " | Risk: manual review"; color: Style.text3; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.fillWidth: true; elide: Text.ElideRight }
+                            }
+                            GlowButton {
+                                Layout.preferredWidth: 140
+                                label: item.actionable && item.actionId ? "Prepare Dry Run" : "Not available"
+                                enabled: item.actionable && item.actionId
+                                variant: "outlined"
+                                glowColor: Style.cyan
+                                onClicked: SystemCtrl.dryRunOptimizationAction(item.actionId)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         ListView {
             id: list
             Layout.fillWidth: true

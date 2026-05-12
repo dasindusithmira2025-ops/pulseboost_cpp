@@ -126,7 +126,7 @@ Flickable {
                 GlowButton {
                     label: "Export Report"
                     glowColor: Style.violet
-                    variant: "solid"
+                    variant: "filled"
                     onClicked: reportDialog.open()
                 }
             }
@@ -274,10 +274,10 @@ Flickable {
 
                             GlowButton {
                                 Layout.preferredWidth: 120
-                                label: "Restore Point"
+                                label: "Use Undo Center"
                                 variant: "outlined"
                                 glowColor: Style.amber
-                                onClicked: SystemCtrl.restoreSystemSnapshot(modelData.id)
+                                enabled: false
                             }
                         }
                     }
@@ -392,6 +392,7 @@ Flickable {
     }
 
     component SummaryCard: GlassCard {
+        id: summaryCard
         property string title: ""
         property string value: ""
         property color accent: Style.violet
@@ -411,14 +412,14 @@ Flickable {
                 font.letterSpacing: 1
             }
             Text {
-                text: value
-                color: accent
+                text: summaryCard.value
+                color: summaryCard.accent
                 font.family: Style.fontDisplay
                 font.pixelSize: Style.f32
                 font.weight: Style.w700
                 
                 layer.enabled: true
-                layer.effect: DropShadow { color: accent; radius: 10; spread: 0.1; samples: 21; opacity: 0.5 }
+                layer.effect: DropShadow { color: summaryCard.accent; radius: 10; spread: 0.1; samples: 21; opacity: 0.5 }
             }
         }
     }

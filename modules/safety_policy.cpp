@@ -136,27 +136,34 @@ bool SafetyPolicy::ensureDatabase() const {
     }
 
     const QString connectionName = QStringLiteral("pulseboost_safety_%1").arg(reinterpret_cast<quintptr>(this));
-    QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName);
-    db.setDatabaseName(QString::fromStdString(databasePath_.string()));
-    if (!db.open()) {
-        QSqlDatabase::removeDatabase(connectionName);
-        return false;
-    }
+    bool ok = false;
+    {
+        QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName);
+        db.setDatabaseName(QString::fromStdString(databasePath_.string()));
+        if (!db.open()) {
+            db.close();
+            db = QSqlDatabase();
+            QSqlDatabase::removeDatabase(connectionName);
+            return false;
+        }
 
-    QSqlQuery query(db);
-    const bool ok = query.exec(QStringLiteral(
-        "CREATE TABLE IF NOT EXISTS action_audit_log ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-        "action_type TEXT NOT NULL,"
-        "status TEXT NOT NULL,"
-        "summary TEXT NOT NULL,"
-        "risk_level TEXT,"
-        "dry_run INTEGER NOT NULL DEFAULT 1,"
-        "request_json TEXT,"
-        "result_json TEXT"
-        ")"));
-    db.close();
+        {
+            QSqlQuery query(db);
+            ok = query.exec(QStringLiteral(
+                "CREATE TABLE IF NOT EXISTS action_audit_log ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                "action_type TEXT NOT NULL,"
+                "status TEXT NOT NULL,"
+                "summary TEXT NOT NULL,"
+                "risk_level TEXT,"
+                "dry_run INTEGER NOT NULL DEFAULT 1,"
+                "request_json TEXT,"
+                "result_json TEXT"
+                ")"));
+        }
+        db.close();
+    }
     QSqlDatabase::removeDatabase(connectionName);
     return ok;
 }
@@ -167,28 +174,35 @@ bool SafetyPolicy::audit(const SafetyAuditEntry &entry) const {
     }
 
     const QString connectionName = QStringLiteral("pulseboost_safety_insert_%1").arg(reinterpret_cast<quintptr>(this));
-    QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName);
-    db.setDatabaseName(QString::fromStdString(databasePath_.string()));
-    if (!db.open()) {
-        QSqlDatabase::removeDatabase(connectionName);
-        return false;
-    }
+    bool ok = false;
+    {
+        QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName);
+        db.setDatabaseName(QString::fromStdString(databasePath_.string()));
+        if (!db.open()) {
+            db.close();
+            db = QSqlDatabase();
+            QSqlDatabase::removeDatabase(connectionName);
+            return false;
+        }
 
-    QSqlQuery query(db);
-    query.prepare(QStringLiteral(
-        "INSERT INTO action_audit_log "
-        "(created_at, action_type, status, summary, risk_level, dry_run, request_json, result_json) "
-        "VALUES (:created_at, :action_type, :status, :summary, :risk_level, :dry_run, :request_json, :result_json)"));
-    query.bindValue(QStringLiteral(":created_at"), QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
-    query.bindValue(QStringLiteral(":action_type"), QString::fromStdString(entry.actionId));
-    query.bindValue(QStringLiteral(":status"), QString::fromStdString(entry.status));
-    query.bindValue(QStringLiteral(":summary"), QString::fromStdString(entry.summary));
-    query.bindValue(QStringLiteral(":risk_level"), QString::fromStdString(riskToString(entry.riskLevel)));
-    query.bindValue(QStringLiteral(":dry_run"), entry.dryRun ? 1 : 0);
-    query.bindValue(QStringLiteral(":request_json"), jsonToCompactString(entry.requestJson));
-    query.bindValue(QStringLiteral(":result_json"), jsonToCompactString(entry.resultJson));
-    const bool ok = query.exec();
-    db.close();
+        {
+            QSqlQuery query(db);
+            query.prepare(QStringLiteral(
+                "INSERT INTO action_audit_log "
+                "(created_at, action_type, status, summary, risk_level, dry_run, request_json, result_json) "
+                "VALUES (:created_at, :action_type, :status, :summary, :risk_level, :dry_run, :request_json, :result_json)"));
+            query.bindValue(QStringLiteral(":created_at"), QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
+            query.bindValue(QStringLiteral(":action_type"), QString::fromStdString(entry.actionId));
+            query.bindValue(QStringLiteral(":status"), QString::fromStdString(entry.status));
+            query.bindValue(QStringLiteral(":summary"), QString::fromStdString(entry.summary));
+            query.bindValue(QStringLiteral(":risk_level"), QString::fromStdString(riskToString(entry.riskLevel)));
+            query.bindValue(QStringLiteral(":dry_run"), entry.dryRun ? 1 : 0);
+            query.bindValue(QStringLiteral(":request_json"), jsonToCompactString(entry.requestJson));
+            query.bindValue(QStringLiteral(":result_json"), jsonToCompactString(entry.resultJson));
+            ok = query.exec();
+        }
+        db.close();
+    }
     QSqlDatabase::removeDatabase(connectionName);
     return ok;
 }

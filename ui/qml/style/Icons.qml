@@ -18,6 +18,14 @@ QtObject {
         if (name === "settings") return "\u2630"
         if (name === "chat") return "\u25EC"
         if (name === "bolt") return "\u26A1"
+        if (name === "sparkles") return "\u2726"
+        if (name === "chart") return "\u223F"
+        if (name === "file") return "\u25A4"
+        if (name === "restore") return "\u21BA"
+        if (name === "activity") return "\u25CE"
+        if (name === "rocket") return "\u25B7"
+        if (name === "wifi") return "\u25C9"
+        if (name === "shield") return "\u26E8"
         return "\u25CF"
     }
 }

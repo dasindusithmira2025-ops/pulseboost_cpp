@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.15
 import "../style"
 import "../components/controls"
 import "../components/foundation"
+import "../components" as PB
 
 Flickable {
     id: root
@@ -11,11 +12,11 @@ Flickable {
     contentWidth: width
     contentHeight: contentColumn.implicitHeight + Style.pagePad * 2
 
-    property bool confirmed: false
     property var actions: SystemCtrl.actionCenterActions
     property var proof: SystemCtrl.latestProofReport
     property string currentFilter: "safe"
     property var selectedAction: actions && actions.length > 0 ? actions[0] : null
+    property var pendingAction: null
 
     function riskColor(risk) {
         if (risk === "critical" || risk === "high") return Style.red
@@ -47,6 +48,44 @@ Flickable {
             if (matchesFilter(actions[i])) result.push(actions[i])
         }
         return result
+    }
+
+    function dryRunPassed(action) {
+        if (!action) return false
+        if (!action.dryRunSupported) return true
+        const result = String(action.dryRunResult || "")
+        return result.length > 0 && result !== "Not run" && result.indexOf("Blocked:") !== 0
+    }
+
+    function requiresDialog(action) {
+        if (!action) return true
+        const risk = String(action.riskLevel || "").toLowerCase()
+        return action.confirmationRequired || action.advancedOnly || risk === "medium" || risk === "moderate" || risk === "high" || risk === "critical"
+    }
+
+    function runDryRun(action) {
+        root.selectedAction = action
+        const result = SystemCtrl.dryRunOptimizationAction(action.actionId)
+        dryRunDialog.resultText = result.summary || result.reason || "Dry-run completed without additional backend detail."
+        dryRunDialog.open()
+    }
+
+    function requestApply(action) {
+        root.selectedAction = action
+        if (!dryRunPassed(action)) return
+        if (requiresDialog(action)) {
+            root.pendingAction = action
+            confirmDialog.actionName = action.name
+            confirmDialog.riskLevel = action.riskLevel
+            confirmDialog.changeSummary = action.expectedEffect
+            confirmDialog.dryRunResult = action.dryRunResult
+            confirmDialog.backupRestore = action.backupRestoreAvailability
+            confirmDialog.rollbackAvailable = action.rollbackAvailable
+            confirmDialog.typedConfirmationRequired = String(action.riskLevel || "").toLowerCase() === "high" || String(action.riskLevel || "").toLowerCase() === "critical"
+            confirmDialog.open()
+            return
+        }
+        SystemCtrl.executeOptimizationAction(action.actionId, false)
     }
 
     ColumnLayout {
@@ -82,17 +121,13 @@ Flickable {
                     Layout.preferredHeight: 56
                     radius: Style.r12
                     color: Style.bg1
-                    border.color: root.confirmed ? Style.amber : Style.border1
+                    border.color: Style.amber
                     border.width: 1
                     RowLayout {
                         anchors.fill: parent
                         anchors.margins: Style.s12
-                        CheckBox {
-                            id: confirmBox
-                            checked: root.confirmed
-                            onCheckedChanged: root.confirmed = checked
-                        }
-                        Text { text: "Manual confirmation"; color: Style.text0; font.family: Style.fontBody; font.pixelSize: Style.f13; font.weight: Style.w600 }
+                        StatusPill { text: "Manual review required"; tone: "warning" }
+                        Text { text: "Dialogs enforce gated apply"; color: Style.text0; font.family: Style.fontBody; font.pixelSize: Style.f12; font.weight: Style.w600; Layout.fillWidth: true; elide: Text.ElideRight }
                     }
                 }
             }
@@ -240,12 +275,32 @@ Flickable {
                         ColumnLayout {
                             Layout.preferredWidth: 150
                             spacing: Style.s8
-                            GlowButton { Layout.fillWidth: true; label: "Dry Run"; glowColor: Style.cyan; variant: "outlined"; onClicked: SystemCtrl.dryRunOptimizationAction(modelData.actionId) }
+                            GlowButton { Layout.fillWidth: true; label: "Dry Run"; glowColor: Style.cyan; variant: "outlined"; onClicked: root.runDryRun(modelData) }
                             GlowButton { Layout.fillWidth: true; label: "Review"; variant: "outlined"; glowColor: Style.amber; onClicked: root.selectedAction = modelData }
-                            GlowButton { Layout.fillWidth: true; label: "Apply"; enabled: modelData.canExecuteFromCenter; glowColor: root.riskColor(modelData.riskLevel); onClicked: SystemCtrl.executeOptimizationAction(modelData.actionId, root.confirmed) }
+                            GlowButton {
+                                Layout.fillWidth: true
+                                label: root.dryRunPassed(modelData) ? "Apply" : "Dry-run required"
+                                enabled: modelData.canExecuteFromCenter && root.dryRunPassed(modelData)
+                                glowColor: root.riskColor(modelData.riskLevel)
+                                onClicked: root.requestApply(modelData)
+                            }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    PB.DryRunResultDialog {
+        id: dryRunDialog
+    }
+
+    PB.ConfirmationDialog {
+        id: confirmDialog
+        onConfirmed: {
+            if (root.pendingAction) {
+                SystemCtrl.executeOptimizationAction(root.pendingAction.actionId, true)
+                root.pendingAction = null
             }
         }
     }

@@ -45,10 +45,10 @@ Flickable {
                     Layout.fillWidth: true
                     spacing: Style.s8
                     Text { text: "Boost-Up"; color: Style.text0; font.family: Style.fontDisplay; font.pixelSize: Style.f32; font.weight: Style.w700 }
-                    Text { text: "Run the prep workflow before gaming or heavy work. PulseBoost shows the work it completed instead of only showing a generic success toast."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f13; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                    Text { text: "Run low-risk prep before gaming or heavy work. Advanced RAM and TCP changes stay in manual review through Action Center."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f13; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                     RowLayout {
                         spacing: Style.s10
-                        GlowButton { label: "Pre-Game Clean"; glowColor: Style.cyan; onClicked: { SystemCtrl.runClean(); SystemCtrl.optimizeRam(); SystemCtrl.flushDns() } }
+                        GlowButton { label: "Safe Prep"; glowColor: Style.cyan; onClicked: { SystemCtrl.runClean(); SystemCtrl.flushDns() } }
                         GlowButton { label: "Restore Point"; variant: "outlined"; glowColor: Style.green; onClicked: SystemCtrl.createRestorePoint() }
                     }
                 }
@@ -91,12 +91,12 @@ Flickable {
 
             Repeater {
                 model: [
-                    { title: "Clean Junk", text: "Remove temporary clutter before heavy sessions.", action: "clean" },
-                    { title: "Optimize RAM", text: "Trim standby and working sets to recover memory.", action: "ram" },
-                    { title: "Refresh Network", text: "Flush DNS and tune TCP for lower latency.", action: "network" },
+                    { title: "Clean Junk", text: "Quarantine safe temporary clutter before heavy sessions.", action: "clean", enabled: true },
+                    { title: "RAM Manual Review", text: "Preview memory pressure; working-set trim is an advanced action.", action: "ram", enabled: false },
+                    { title: "Refresh Network", text: "Flush DNS only. TCP tuning requires manual review.", action: "network", enabled: true },
                     { title: "Optimize Disk", text: "Trigger the system drive optimization path.", action: "disk" },
-                    { title: "Low-Latency TCP", text: "Apply the TCP optimization routine directly.", action: "tcp" },
-                    { title: "Safety Backup", text: "Create a restore point before aggressive changes.", action: "backup" }
+                    { title: "TCP Manual Review", text: "Use Action Center dry-run and confirmation before TCP changes.", action: "tcp", enabled: false },
+                    { title: "Safety Backup", text: "Create a restore point before advanced changes.", action: "backup", enabled: true }
                 ]
                 delegate: GlassPanel {
                     required property var modelData
@@ -112,14 +112,13 @@ Flickable {
                         Text { text: modelData.text; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                         Item { Layout.fillHeight: true }
                         GlowButton {
-                            label: "Run"
-                            glowColor: Style.cyan
+                            label: modelData.enabled ? "Run" : "Manual Review"
+                            enabled: modelData.enabled
+                            glowColor: modelData.enabled ? Style.cyan : Style.amber
                             onClicked: {
                                 if (modelData.action === "clean") SystemCtrl.runClean()
-                                else if (modelData.action === "ram") SystemCtrl.optimizeRam()
-                                else if (modelData.action === "network") { SystemCtrl.flushDns(); SystemCtrl.optimizeTcp() }
+                                else if (modelData.action === "network") SystemCtrl.flushDns()
                                 else if (modelData.action === "disk") SystemCtrl.optimizeDisk()
-                                else if (modelData.action === "tcp") SystemCtrl.optimizeTcp()
                                 else if (modelData.action === "backup") SystemCtrl.createRestorePoint()
                             }
                         }

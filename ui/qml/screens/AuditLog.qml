@@ -29,6 +29,16 @@ Flickable {
         return result
     }
 
+    function rollbackText(row) {
+        const text = String((row.actionType || "") + " " + (row.resultJson || "")).toLowerCase()
+        if (text.indexOf("restore") !== -1 || text.indexOf("revert") !== -1 || text.indexOf("rollback") !== -1 || text.indexOf("quarantine") !== -1) return "Tracked"
+        return "Review"
+    }
+
+    function confirmationText(row) {
+        return row.dryRun ? "Dry-run" : "Backend gate"
+    }
+
     ColumnLayout {
         id: contentColumn
         width: root.width - Style.pagePad * 2
@@ -111,8 +121,10 @@ Flickable {
                         Text { text: "Time"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.preferredWidth: 156 }
                         Text { text: "Action"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.preferredWidth: 170 }
                         Text { text: "Risk"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.preferredWidth: 82 }
-                        Text { text: "Mode"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.preferredWidth: 70 }
-                        Text { text: "Summary"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.fillWidth: true }
+                        Text { text: "Result"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.preferredWidth: 80 }
+                        Text { text: "Rollback"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.preferredWidth: 86 }
+                        Text { text: "Confirmation"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.preferredWidth: 104 }
+                        Text { text: "Details"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.fillWidth: true }
                     }
                 }
                     Repeater {
@@ -133,7 +145,9 @@ Flickable {
                                 Text { text: modelData.createdAt; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f10; Layout.preferredWidth: 156; elide: Text.ElideRight }
                                 Text { text: modelData.actionType; color: Style.text0; font.family: Style.fontBody; font.pixelSize: Style.f12; font.weight: Style.w600; Layout.preferredWidth: 170; elide: Text.ElideRight }
                                 StatusPill { text: String(modelData.riskLevel).toUpperCase(); tone: modelData.riskLevel === "high" || modelData.riskLevel === "critical" ? "error" : (modelData.riskLevel === "moderate" ? "warning" : "success") }
-                                Text { text: modelData.dryRun ? "Dry-run" : "Live"; color: modelData.dryRun ? Style.cyan : Style.amber; font.family: Style.fontMono; font.pixelSize: Style.f11; Layout.preferredWidth: 70 }
+                                Text { text: modelData.status || (modelData.dryRun ? "dry-run" : "live"); color: modelData.status === "success" ? Style.green : Style.amber; font.family: Style.fontMono; font.pixelSize: Style.f11; Layout.preferredWidth: 80; elide: Text.ElideRight }
+                                Text { text: root.rollbackText(modelData); color: Style.cyan; font.family: Style.fontMono; font.pixelSize: Style.f11; Layout.preferredWidth: 86; elide: Text.ElideRight }
+                                Text { text: root.confirmationText(modelData); color: modelData.dryRun ? Style.cyan : Style.amber; font.family: Style.fontMono; font.pixelSize: Style.f11; Layout.preferredWidth: 104; elide: Text.ElideRight }
                                 Text { text: modelData.summary; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f12; Layout.fillWidth: true; elide: Text.ElideRight }
                             }
                             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.selectedEntry = modelData }
@@ -154,8 +168,8 @@ Flickable {
                         Text { text: "Human explanation"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; font.weight: Style.w600 }
                         Text { text: root.selectedEntry ? root.selectedEntry.summary : "No entry selected."; color: Style.text2; font.family: Style.fontBody; font.pixelSize: Style.f12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                         Text { text: "Technical summary"; color: Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f13; font.weight: Style.w600 }
-                        Text { text: root.selectedEntry ? ("Time: " + root.selectedEntry.createdAt + "\nMode: " + (root.selectedEntry.dryRun ? "Dry-run" : "Live") + "\nSafety policy result: recorded in audit log") : "--"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                        Text { text: "Affected paths/settings are shown when supplied by the backend payload."; color: Style.text3; font.family: Style.fontBody; font.pixelSize: Style.f11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                        Text { text: root.selectedEntry ? ("Time: " + root.selectedEntry.createdAt + "\nResult: " + root.selectedEntry.status + "\nRollback: " + root.rollbackText(root.selectedEntry) + "\nConfirmation: " + root.confirmationText(root.selectedEntry) + "\nSafety policy result: recorded in action_audit_log") : "--"; color: Style.text2; font.family: Style.fontMono; font.pixelSize: Style.f11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                        Text { text: root.selectedEntry ? ("Affected paths/settings payload:\n" + (root.selectedEntry.requestJson || root.selectedEntry.resultJson || "No backend payload supplied.")) : "Affected paths/settings are shown when supplied by the backend payload."; color: Style.text3; font.family: Style.fontBody; font.pixelSize: Style.f11; wrapMode: Text.WordWrap; Layout.fillWidth: true; elide: Text.ElideRight; maximumLineCount: 5 }
                     }
                 }
             }

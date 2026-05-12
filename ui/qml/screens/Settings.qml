@@ -51,14 +51,15 @@ Flickable {
                 model: ["General", "AI", "License", "Schedule", "Updates", "Advanced", "About"]
                 delegate: Rectangle {
                     required property string modelData
+                    required property int index
                     Layout.preferredWidth: 110
                     Layout.preferredHeight: 36
                     radius: Style.r10
-                    color: root.currentTab === model.index ? Style.bg3 : Style.bg2
-                    border.color: root.currentTab === model.index ? Style.border2 : Style.border1
+                    color: root.currentTab === index ? Style.bg3 : Style.bg2
+                    border.color: root.currentTab === index ? Style.border2 : Style.border1
                     border.width: 1
-                    Text { anchors.centerIn: parent; text: modelData; color: root.currentTab === model.index ? Style.text0 : Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f12; font.weight: Style.w600 }
-                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.currentTab = model.index }
+                    Text { anchors.centerIn: parent; text: modelData; color: root.currentTab === index ? Style.text0 : Style.text1; font.family: Style.fontBody; font.pixelSize: Style.f12; font.weight: Style.w600 }
+                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.currentTab = index }
                 }
             }
         }

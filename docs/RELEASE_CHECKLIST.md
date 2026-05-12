@@ -23,3 +23,41 @@ Run before packaging:
 ## Demo Build Notes
 
 Use the Qt/QML app as the only production UI. The release should be built from source using CMake presets and validated with the script above. Do not package stale local runtime state.
+
+## Known Validation Warnings
+
+No known validation warnings after Phase 2.7. CLI/headless commands now create a Qt application object before SQLite-backed safety/audit code can run, and SQLite connections are closed with query objects out of scope before `removeDatabase()`.
+
+## QML Release Scope
+
+Production top-level screens in the current shell:
+
+- `Home`
+- `ActionCenter`
+- `AiChat`
+- `HealthHistory` as before/after proof
+- `AuditLog`
+- `RestoreCenter`
+- `ProcessManager`
+- `StartupManager`
+- `StorageAnalyzer`
+- `NetworkMonitor`
+- `Settings`
+
+Production advanced/internal screens retained in `qml.qrc`:
+
+- `Tools`
+- `Optimizations`
+- `BoostUp`
+- `Backup`
+- `Dashboard`
+- `Charts`
+- `GameMode`
+- `RamOptimizer`
+- `Temps`
+- `Games`
+- `DriverManager`
+- `SecurityScanner`
+- `Onboarding`
+
+These retained screens must not be treated as deprecated Tauri/web surfaces. Any screen promoted back to top-level navigation needs safety-copy review for dry-run, confirmation, rollback, and audit visibility.

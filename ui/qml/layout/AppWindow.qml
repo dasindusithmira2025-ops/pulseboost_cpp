@@ -13,7 +13,6 @@ ApplicationWindow {
     flags: Qt.Window | Qt.FramelessWindowHint
     color: Style.bg0
 
-    property bool sidebarCollapsed: false
     property string currentScreen: "home"
     property bool allowQuit: false
     property int highCpuSeconds: 0
@@ -25,99 +24,83 @@ ApplicationWindow {
     property bool showCrashBanner: StartupCrashDetected
     property bool showUpdateBanner: StartupUpdateAvailable
 
-    Rectangle {
+    ColumnLayout {
         anchors.fill: parent
-        color: Style.bg0
-    }
+        spacing: 0
 
-    RowLayout {
-        anchors.fill: parent
-        anchors.margins: Style.s16
-        spacing: Style.s16
-
-        Sidebar {
-            id: sidebar
-            Layout.fillHeight: true
-            Layout.preferredWidth: sidebarCollapsed ? Style.sidebarCol : Style.sidebarW
-            collapsed: sidebarCollapsed
-            currentScreen: root.currentScreen
-            onScreenSelected: root.currentScreen = screenId
-            onCollapseToggled: sidebarCollapsed = !sidebarCollapsed
+        TopBar {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 56
+            title: "PulseBoost AI"
+            onCloseRequested: { root.allowQuit = true; root.close() }
+            onMinRequested: root.showMinimized()
+            onMaxRequested: root.visibility === Window.Maximized ? root.showNormal() : root.showMaximized()
         }
 
-        GlassPanel {
+        RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            panelRadius: Style.r20
-            fillColor: Style.glassPanel
-            borderColor: Style.borderGlass
-            contentMargin: 0
+            spacing: 0
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: Style.s16
-                spacing: Style.s12
+            Sidebar {
+                Layout.preferredWidth: 256
+                Layout.fillHeight: true
+                currentScreen: root.currentScreen
+                onScreenSelected: root.currentScreen = screenId
+            }
 
-                TopBar {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Style.topbarH
-                    title: screenTitle(root.currentScreen)
-                    onCloseRequested: { root.allowQuit = true; root.close() }
-                    onMinRequested: root.showMinimized()
-                    onMaxRequested: root.visibility === Window.Maximized ? root.showNormal() : root.showMaximized()
-                }
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                color: Style.bg0
+                clip: true
 
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: visible ? 44 : 0
-                    visible: root.showCrashBanner || root.showUpdateBanner || !FeatureGate.isPro
-                    radius: Style.r12
-                    color: root.showCrashBanner ? Style.redGlow : (root.showUpdateBanner ? Style.cyanGlow : Style.bg2)
-                    border.color: root.showCrashBanner ? Style.red : (root.showUpdateBanner ? Style.cyan : Style.border1)
-                    border.width: 1
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 0
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: Style.s16
-                        anchors.rightMargin: Style.s16
-                        spacing: Style.s12
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: visible ? 44 : 0
+                        visible: root.showCrashBanner || root.showUpdateBanner || !FeatureGate.isPro
+                        color: root.showCrashBanner ? Style.redGlow : (root.showUpdateBanner ? Style.cyanGlow : Style.bg2)
+                        border.color: Style.border1
+                        border.width: 1
 
-                        Text {
-                            Layout.fillWidth: true
-                            text: root.showCrashBanner
-                                  ? "PulseBoost recovered from a previous crash. Review diagnostics in Settings."
-                                  : (root.showUpdateBanner
-                                     ? ("Update " + StartupUpdateVersion + " is available.")
-                                     : (FeatureGate.isPro ? "" : (FeatureGate.trialExpired ? "Trial expired. Settings stays available for activation." : ("Trial active | " + FeatureGate.trialDaysLeft + " days left."))))
-                            color: Style.text0
-                            font.family: Style.fontBody
-                            font.pixelSize: Style.f13
-                            font.weight: Style.w600
-                        }
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 24
+                            anchors.rightMargin: 24
+                            spacing: 12
 
-                        GlowButton {
-                            visible: root.showUpdateBanner || !FeatureGate.isPro || root.showCrashBanner
-                            label: root.showUpdateBanner ? "Settings" : (root.showCrashBanner ? "Open Settings" : "Upgrade")
-                            glowColor: root.showCrashBanner ? Style.red : Style.cyan
-                            variant: "outlined"
-                            onClicked: root.currentScreen = "settings"
+                            Text {
+                                Layout.fillWidth: true
+                                text: root.showCrashBanner
+                                      ? "PulseBoost recovered from a previous crash. Review diagnostics in Settings."
+                                      : (root.showUpdateBanner
+                                         ? ("Update " + StartupUpdateVersion + " is available.")
+                                         : (FeatureGate.trialExpired ? "Trial expired. Settings stays available for activation." : ("Trial active | " + FeatureGate.trialDaysLeft + " days left.")))
+                                color: Style.text0
+                                font.family: Style.fontBody
+                                font.pixelSize: 13
+                                font.weight: Style.w600
+                                elide: Text.ElideRight
+                            }
+
+                            GlowButton {
+                                label: root.showUpdateBanner ? "Settings" : (root.showCrashBanner ? "Open Settings" : "Upgrade")
+                                glowColor: root.showCrashBanner ? Style.red : Style.cyan
+                                variant: "outlined"
+                                onClicked: root.currentScreen = "settings"
+                            }
                         }
                     }
-                }
 
-                Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
                     ContentArea {
-                        anchors.fill: parent
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
                         currentScreen: root.currentScreen
                     }
-                }
-
-                StatusBar {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Style.statusH
-                    currentScreen: screenTitle(root.currentScreen)
                 }
             }
         }
@@ -224,19 +207,4 @@ ApplicationWindow {
     }
 
     function checkScheduledTasks() {}
-
-    function screenTitle(screenId) {
-        if (screenId === "home") return "Overview"
-        if (screenId === "action-center") return "Action Center"
-        if (screenId === "ai-advisor") return "AI Advisor"
-        if (screenId === "before-after") return "Before / After Proof"
-        if (screenId === "audit-log") return "Audit Log"
-        if (screenId === "restore-center") return "Restore Center"
-        if (screenId === "processes") return "Processes"
-        if (screenId === "startup-apps") return "Startup Apps"
-        if (screenId === "storage-cleanup") return "Storage Cleanup"
-        if (screenId === "network-tools") return "Network Tools"
-        if (screenId === "settings") return "Settings"
-        return "PulseBoost AI"
-    }
 }

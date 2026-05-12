@@ -21,6 +21,7 @@ QtObject {
     readonly property color border2: "#3A4D6B"
     readonly property color borderGlass: "#33FFFFFF"
     readonly property color borderAccentSoft: "#441AC8FF"
+    readonly property color borderSubtle: "#1AFFFFFF"
 
     readonly property color text0: "#E8EAED"
     readonly property color text1: "#D6DBE7"
@@ -45,6 +46,15 @@ QtObject {
     readonly property color warning: amber
     readonly property color danger: red
     readonly property color info: cyan
+
+    readonly property color topBarBackground: "#8013172B"
+    readonly property color sidebarBackground: "#0F1220"
+    readonly property color sidebarAccent: "#1E2338"
+    readonly property color sidebarBorder: "#14FFFFFF"
+    readonly property color sidebarPrimary: cyan
+    readonly property color sidebarPrimaryText: bg0
+    readonly property color sidebarText: text0
+    readonly property color sidebarMutedText: "#B38B92A8"
 
     readonly property color trafficClose: red
     readonly property color trafficMin: amber

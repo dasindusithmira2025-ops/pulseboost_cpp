@@ -93,7 +93,7 @@ Flickable {
                                 spacing: Style.s10
                                 Text { text: modelData.id; color: Style.text0; font.family: Style.fontMono; font.pixelSize: Style.f11; Layout.fillWidth: true; elide: Text.ElideRight }
                                 Text { text: Number(modelData.healthScore).toFixed(0); color: Style.healthColor(modelData.healthScore); font.family: Style.fontMono; font.pixelSize: Style.f12; Layout.preferredWidth: 40 }
-                                GlowButton { label: "Restore"; variant: "outlined"; glowColor: Style.amber; onClicked: SystemCtrl.restoreSystemSnapshot(modelData.id) }
+                                GlowButton { label: "Use Undo Center"; variant: "outlined"; glowColor: Style.amber; enabled: false }
                             }
                         }
                     }

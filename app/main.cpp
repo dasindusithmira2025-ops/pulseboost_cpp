@@ -996,6 +996,12 @@ int main(int argc, char *argv[]) {
 
     try {
     if (argc > 1) {
+        QCoreApplication app(argc, argv);
+        app.setApplicationName("PulseBoost AI");
+        app.setOrganizationName("PulseBoost");
+        app.setApplicationVersion("1.0.0");
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+
         pulseboost::ProcessManager processManager;
         pulseboost::ServiceManager serviceManager;
         pulseboost::RegistryOptimizer registryOptimizer;
@@ -1028,7 +1034,6 @@ int main(int argc, char *argv[]) {
         const std::string command = argv[1];
 
         if (command == "--daemon") {
-            QCoreApplication app(argc, argv);
             pulseboost::BackendDaemon daemon(processManager,
                                              serviceManager,
                                              registryOptimizer,

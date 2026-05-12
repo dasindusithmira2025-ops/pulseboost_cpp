@@ -114,6 +114,8 @@ Flickable {
                                 font.family: Style.fontDisplay
                                 font.pixelSize: Style.f28
                                 font.weight: Style.w700
+                                width: parent.width
+                                elide: Text.ElideRight
                             }
                         }
                     }
@@ -135,6 +137,7 @@ Flickable {
                                 font.pixelSize: Style.f13
                                 font.weight: Style.w600
                                 wrapMode: Text.WordWrap
+                                width: parent.width
                             }
                             Text {
                                 text: root.advisors.length > 0 ? root.advisors[0].description : "PulseBoost is receiving live telemetry and waiting for the next meaningful optimization opportunity."
@@ -142,6 +145,7 @@ Flickable {
                                 font.family: Style.fontBody
                                 font.pixelSize: Style.f12
                                 wrapMode: Text.WordWrap
+                                width: parent.width
                             }
                         }
                     }

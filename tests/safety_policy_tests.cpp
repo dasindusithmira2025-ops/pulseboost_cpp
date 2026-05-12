@@ -30,15 +30,22 @@ std::filesystem::path tempDbPath() {
 
 bool auditRowExists(const std::filesystem::path &dbPath) {
     const QString connectionName = QStringLiteral("audit_test_read");
-    QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName);
-    db.setDatabaseName(QString::fromStdString(dbPath.string()));
-    if (!db.open()) {
-        QSqlDatabase::removeDatabase(connectionName);
-        return false;
+    bool ok = false;
+    {
+        QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName);
+        db.setDatabaseName(QString::fromStdString(dbPath.string()));
+        if (!db.open()) {
+            db.close();
+            db = QSqlDatabase();
+            QSqlDatabase::removeDatabase(connectionName);
+            return false;
+        }
+        {
+            QSqlQuery query(db);
+            ok = query.exec(QStringLiteral("SELECT COUNT(*) FROM action_audit_log")) && query.next() && query.value(0).toInt() == 1;
+        }
+        db.close();
     }
-    QSqlQuery query(db);
-    const bool ok = query.exec(QStringLiteral("SELECT COUNT(*) FROM action_audit_log")) && query.next() && query.value(0).toInt() == 1;
-    db.close();
     QSqlDatabase::removeDatabase(connectionName);
     return ok;
 }
@@ -104,6 +111,40 @@ void testAuditSchema() {
     expect(auditRowExists(dbPath), "audit table should contain one row");
 }
 
+void testRequiredDescriptorsExist() {
+    const auto dbPath = tempDbPath();
+    pulseboost::SafetyPolicy policy(dbPath);
+    const char *required[] = {
+        "junk.clean",
+        "junk.clean.permanent",
+        "file.delete",
+        "process.kill",
+        "process.suspend",
+        "startup.disable",
+        "startup.enable",
+        "startup.delay",
+        "network.flush_dns",
+        "network.optimize_tcp",
+        "network.winsock_reset",
+        "network.revert",
+        "ram.trim_working_sets",
+        "ram.flush_standby",
+        "ram.saver",
+        "disk.optimize",
+        "restore.create",
+        "snapshot.restore",
+        "tweak.apply",
+        "tweak.revert",
+        "game.optimize",
+        "game.revert",
+        "schedule.task",
+    };
+
+    for (const char *actionId : required) {
+        expect(policy.descriptorFor(actionId).has_value(), actionId);
+    }
+}
+
 }  // namespace
 
 int main(int argc, char **argv) {
@@ -112,6 +153,7 @@ int main(int argc, char **argv) {
     testPolicyBlocksNonAdvancedAction();
     testPolicyAllowsDryRun();
     testAuditSchema();
+    testRequiredDescriptorsExist();
     g_failures += runJunkCleanerTests();
     return g_failures == 0 ? 0 : 1;
 }

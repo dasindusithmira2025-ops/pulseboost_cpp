@@ -17,6 +17,7 @@ Flickable {
     property string query: ""
     property var rows: []
     property var pendingProcess: null
+    property string pendingProcessAction: ""
 
     function refreshRows() {
         const baseRows = SystemCtrl.sortedProcesses(sortKey, descending)
@@ -249,7 +250,11 @@ Flickable {
                         variant: "outlined"
                         glowColor: modelData.isCritical ? Style.border1 : Style.amber
                         enabled: !modelData.isCritical
-                        onClicked: SystemCtrl.suspendProcess(modelData.pid)
+                        onClicked: {
+                            root.pendingProcess = modelData
+                            root.pendingProcessAction = "suspend"
+                            processActionDialog.open()
+                        }
                     }
 
                     GlowButton {
@@ -261,7 +266,8 @@ Flickable {
                         enabled: !modelData.isCritical
                         onClicked: {
                             root.pendingProcess = modelData
-                            endProcessDialog.open()
+                            root.pendingProcessAction = "end"
+                            processActionDialog.open()
                         }
                     }
                 }
@@ -284,9 +290,9 @@ Flickable {
     }
 
     Dialog {
-        id: endProcessDialog
+        id: processActionDialog
         modal: true
-        title: "Confirm High-Risk Process Action"
+        title: root.pendingProcessAction === "suspend" ? "Confirm Process Suspend" : "Confirm High-Risk Process Action"
         standardButtons: Dialog.Cancel
         width: 480
         ColumnLayout {
@@ -302,7 +308,9 @@ Flickable {
                 elide: Text.ElideRight
             }
             Text {
-                text: "Ending a process can cause data loss or application instability. PulseBoost will keep the action gated and audited by the backend safety policy."
+                text: root.pendingProcessAction === "suspend"
+                      ? "Suspending a process can freeze application work or background services. Review the process before confirming this advanced action."
+                      : "Ending a process can cause data loss or application instability. PulseBoost will keep the action gated and audited by the backend safety policy."
                 color: Style.text2
                 font.family: Style.fontBody
                 font.pixelSize: Style.f13
@@ -313,12 +321,18 @@ Flickable {
                 Layout.fillWidth: true
                 Item { Layout.fillWidth: true }
                 GlowButton {
-                    label: "Confirm End Process"
-                    glowColor: Style.red
+                    label: root.pendingProcessAction === "suspend" ? "Confirm Suspend" : "Confirm End Process"
+                    glowColor: root.pendingProcessAction === "suspend" ? Style.amber : Style.red
                     variant: "outlined"
                     onClicked: {
-                        if (root.pendingProcess) SystemCtrl.killProcess(root.pendingProcess.pid)
-                        endProcessDialog.close()
+                        if (root.pendingProcess) {
+                            if (root.pendingProcessAction === "suspend") {
+                                SystemCtrl.suspendProcess(root.pendingProcess.pid)
+                            } else {
+                                SystemCtrl.killProcess(root.pendingProcess.pid)
+                            }
+                        }
+                        processActionDialog.close()
                     }
                 }
             }

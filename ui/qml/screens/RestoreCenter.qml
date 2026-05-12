@@ -12,6 +12,7 @@ Flickable {
     contentHeight: contentColumn.implicitHeight + Style.pagePad * 2
 
     property var restoreItems: SystemCtrl.restoreCenterItems
+    property var pendingRestoreItem: null
 
     ColumnLayout {
         id: contentColumn
@@ -86,9 +87,64 @@ Flickable {
                                 variant: "outlined"
                                 glowColor: Style.amber
                                 enabled: modelData.type === "System Snapshot"
-                                onClicked: SystemCtrl.restoreSystemSnapshot(modelData.id)
+                                onClicked: {
+                                    root.pendingRestoreItem = modelData
+                                    restoreConfirmDialog.open()
+                                }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    Dialog {
+        id: restoreConfirmDialog
+        modal: true
+        title: "Confirm Snapshot Restore"
+        standardButtons: Dialog.Cancel
+        width: 520
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: Style.s12
+            Text {
+                text: root.pendingRestoreItem ? root.pendingRestoreItem.name : "System Snapshot"
+                color: Style.text0
+                font.family: Style.fontDisplay
+                font.pixelSize: Style.f20
+                font.weight: Style.w700
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+            }
+            Text {
+                text: "Snapshot restore can disable startup entries that were not present in the selected baseline. Review this rollback path before confirming."
+                color: Style.text2
+                font.family: Style.fontBody
+                font.pixelSize: Style.f13
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            Text {
+                text: "Restore point recommended | Rollback state visible | Audit logging enabled"
+                color: Style.amber
+                font.family: Style.fontMono
+                font.pixelSize: Style.f11
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Item { Layout.fillWidth: true }
+                GlowButton {
+                    label: "Confirm Restore"
+                    glowColor: Style.amber
+                    variant: "outlined"
+                    onClicked: {
+                        if (root.pendingRestoreItem) {
+                            SystemCtrl.restoreSystemSnapshot(root.pendingRestoreItem.id)
+                        }
+                        restoreConfirmDialog.close()
                     }
                 }
             }
