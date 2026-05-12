@@ -3,25 +3,10 @@
 )
 
 $ErrorActionPreference = "Stop"
-$candidates = @(
-    (Join-Path $PSScriptRoot "..\build\$Configuration\PulseBoostAI.exe"),
-    (Join-Path $PSScriptRoot "..\build\$Configuration\PulseBoost.exe")
-)
-
-$resolved = $null
-foreach ($candidate in $candidates) {
-    $full = [System.IO.Path]::GetFullPath($candidate)
-    if (Test-Path $full) {
-        $resolved = $full
-        break
-    }
+$exe = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\build\$Configuration\PulseBoostAI.exe"))
+if (-not (Test-Path $exe)) {
+    throw "PulseBoostAI.exe not found at $exe"
 }
-
-if (-not $resolved) {
-    throw "Executable not found. Checked:`n$($candidates -join "`n")"
-}
-
-$exe = $resolved
 
 function Invoke-PulseBoost {
     param(

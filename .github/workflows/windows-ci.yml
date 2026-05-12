@@ -1,0 +1,42 @@
+name: Windows CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-test:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.7.3"
+          arch: win64_msvc2019_64
+
+      - name: Configure release
+        shell: pwsh
+        run: cmake --preset release
+
+      - name: Build release
+        shell: pwsh
+        run: cmake --build --preset build-release
+
+      - name: Run CTest
+        shell: pwsh
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Run smoke tests
+        shell: pwsh
+        run: .\scripts\test.ps1 -Configuration Release
+
+      - name: Run release validation
+        shell: pwsh
+        run: .\scripts\release-validate.ps1 -Configuration Release

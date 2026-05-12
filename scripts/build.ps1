@@ -52,11 +52,9 @@ if (-not (Test-Path $windeployqt)) {
 }
 
 $releaseDir = Join-Path "build" $Configuration
-$primaryExe = Join-Path $releaseDir "PulseBoostAI.exe"
-$fallbackExe = Join-Path $releaseDir "PulseBoost.exe"
-$exePath = if (Test-Path $primaryExe) { $primaryExe } else { $fallbackExe }
+$exePath = Join-Path $releaseDir "PulseBoostAI.exe"
 if (-not (Test-Path $exePath)) {
-    throw "Build succeeded but executable not found in '$releaseDir'."
+    throw "Build succeeded but PulseBoostAI.exe was not found in '$releaseDir'."
 }
 
 & $windeployqt --release --qmldir "ui\qml" $exePath
