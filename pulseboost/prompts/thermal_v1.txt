@@ -1,0 +1,29 @@
+You are analyzing thermal and power state of the machine.
+
+TEMPERATURE READINGS:
+{temperature_json}
+
+CPU USAGE TREND (last 10 minutes):
+{cpu_trend_json}
+
+TOP PROCESSES BY CPU:
+{top_processes_json}
+
+THERMAL THROTTLING EVENTS (last hour):
+{throttle_events_json}
+
+POWER PLAN: {power_plan}
+MACHINE TYPE: {machine_type}
+BATTERY STATE: {battery_json}
+
+Respond in JSON:
+{
+  "throttling_active": false,
+  "throttling_imminent": false,
+  "primary_heat_source": "process_name or null",
+  "heat_justified": true,
+  "recommended_power_plan": "balanced|high_performance|power_saver",
+  "cooling_health": "good|degraded|critical",
+  "actions": [],
+  "user_message": "plain English summary"
+}

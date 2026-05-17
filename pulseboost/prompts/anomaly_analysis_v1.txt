@@ -1,0 +1,35 @@
+﻿You are analyzing a system anomaly. Given the following data, provide a structured analysis.
+
+CURRENT METRICS:
+{metrics_json}
+
+ANOMALY DETECTED:
+{anomaly_json}
+
+MACHINE BASELINE (normal ranges for this machine):
+{baseline_json}
+
+RECENT HISTORY (last 10 minutes):
+{history_json}
+
+SIMILAR PAST EVENTS (from memory):
+{similar_events_json}
+
+Respond in this exact JSON format:
+{
+  "root_cause": "string - most likely explanation",
+  "confidence": 0.0 to 1.0,
+  "contributing_factors": ["factor1", "factor2"],
+  "trajectory": "improving | stable | worsening",
+  "time_to_critical": "string or null - e.g. 8 minutes or null if not critical",
+  "recommended_actions": [
+    {
+      "action": "action_type",
+      "params": {},
+      "risk_level": "SAFE | MODERATE | RISKY",
+      "expected_outcome": "string",
+      "confidence": 0.0 to 1.0
+    }
+  ],
+  "user_message": "plain English explanation for the user, 2-3 sentences max"
+}

@@ -1,0 +1,24 @@
+You are analyzing process memory trends to detect leaks.
+
+PROCESS MEMORY SAMPLES (last 20 minutes, one sample per 60 seconds):
+{process_memory_timeline_json}
+
+SYSTEM TOTAL RAM: {total_ram_gb} GB
+CURRENT RAM PRESSURE: {ram_percent}%
+
+Respond in JSON:
+{
+  "leak_candidates": [
+    {
+      "pid": 1234,
+      "name": "process.exe",
+      "growth_rate_mb_per_min": 5.2,
+      "current_ram_mb": 480,
+      "projected_30min_mb": 636,
+      "confidence": 0.0,
+      "is_leak": true,
+      "reasoning": "why this is or is not a leak",
+      "recommended_action": "monitor|warn|kill|restart_service"
+    }
+  ]
+}

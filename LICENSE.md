@@ -1,0 +1,7 @@
+# License
+
+Copyright (c) 2026 Dasindu Sithmira.
+
+All rights reserved.
+
+No license is granted to copy, modify, distribute, sublicense, or use this software except with explicit written permission from the copyright holder.

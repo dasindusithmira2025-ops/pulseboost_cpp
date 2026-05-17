@@ -1,0 +1,23 @@
+﻿Classify the current machine session mode.
+
+TOP PROCESSES BY CPU:
+{top_processes_json}
+
+METRICS SNAPSHOT:
+{metrics_json}
+
+TIME OF DAY: {hour_of_day}:00
+
+Session modes:
+- gaming: GPU/CPU both high, game executable present, sustained load
+- development: IDE/compiler/docker processes, moderate CPU spikes
+- heavy_compute: sustained high CPU/RAM, batch job or ML training
+- idle: very low CPU/RAM, few active processes
+- normal: mixed usage, no dominant pattern
+
+Respond in JSON:
+{
+  "session_mode": "gaming | development | heavy_compute | idle | normal",
+  "confidence": 0.0 to 1.0,
+  "evidence": ["reason1", "reason2"]
+}

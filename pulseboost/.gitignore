@@ -1,0 +1,21 @@
+﻿.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+dist/
+build/
+data/memory.db
+data/vectors/events.index
+data/vectors/events_meta.json
+ui/node_modules/
+ui/dist/
+
+# build artifacts
+electron/sample.txt
+electron/sample2.txt
+electron/foo.txt
