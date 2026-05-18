@@ -134,6 +134,7 @@ Root files:
 - `core/adaptive_engine.py`: adaptive action state
 - `core/network_optimizer.py`: diagnostics and qos surface
 - `core/gpu_controller.py`: telemetry, settings surface, bios advisory
+- `core/performance_diagnostics.py`: frame-time ingestion and live bottleneck classification
 - `core/game_*`: game detection/library/profile services
 - `core/auth_service.py` + `core/entitlements.py`: account and feature access context
 - `core/agents/*` + `core/cognition/*`: continuous orchestration and optimization intelligence
@@ -227,7 +228,29 @@ File:
 - Persists both run and result payloads
 
 ### Known evidence boundary
-- FPS, 1% low FPS, and frame-time variance require frame hook and are currently unsupported with explicit reasons
+- Live frame-time ingestion is supported through a configured PresentMon-compatible CSV source (`PRESENTMON_CSV_PATH`).
+- Without that trusted source, frame-time/FPS fields remain explicit unavailable values.
+- Benchmark persistence still reports FPS/1% low/frame-time as unsupported until it is wired to the live frame-time ingestion path.
+
+## 12.1 Live Bottleneck Diagnostics
+
+File:
+- `core/performance_diagnostics.py`
+
+### Current model
+- The orchestrator enriches each live snapshot with foreground app, optional GPU telemetry, optional PresentMon CSV frame-time telemetry, and bottleneck classification.
+- API surfaces:
+  - `GET /api/metrics`
+  - `GET /api/metrics/bottleneck`
+  - `GET /api/metrics/live`
+- Output labels are constrained to:
+  - `CPU_BOUND`
+  - `GPU_BOUND`
+  - `RAM_BOUND`
+  - `DISK_BOUND`
+  - `NETWORK_BOUND`
+  - `THERMAL_BOUND`
+  - `BACKGROUND_PROCESS_BOUND`
 
 ## 13. Network and GPU Control Posture
 

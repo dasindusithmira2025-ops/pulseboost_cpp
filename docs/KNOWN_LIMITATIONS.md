@@ -6,7 +6,9 @@
 - Installer packaging for the Electron shell is still not implemented in this repo.
 
 ## Benchmarking
-- Average FPS, 1% low FPS, and frame-time variance remain unavailable without a real frame hook or game telemetry integration.
+- Live FPS, 1% low FPS, and frame-time values are available only when `PRESENTMON_CSV_PATH` points to a live PresentMon-compatible CSV source.
+- Without that trusted frame-time source, frame capture reports an explicit unavailable state instead of fabricating FPS.
+- Benchmark FPS/1% low/frame-time evidence still requires integration with the same trusted frame-time source.
 - Benchmark evidence is strongest today on CPU and, when diagnostics succeed, network deltas.
 - GPU deltas only appear when supported telemetry is available on the current machine.
 

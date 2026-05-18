@@ -17,7 +17,6 @@
 - `debug_app.ps1`
 - `debug_backend.ps1`
 - `debug_frontend.ps1`
-- `serve_app.py`
 
 #### To `.archive/`
 - `stitch_*.json` (5 files)
@@ -31,6 +30,7 @@
 ### 3. Removed
 - `timeoutMs)` (empty junk file)
 - `{'}` (empty junk file)
+- `scripts/serve_app.py` (stale duplicate that pointed at `scripts/pulseboost`; root `serve_app.py` is the active entrypoint)
 
 ### 4. Created New Files
 - `README.md` - Project overview with clean structure
@@ -65,7 +65,7 @@ PulseBoost/
 │   ├── debug_*.ps1
 │   └── README.md
 ├── data/                    # Runtime data (gitignored)
-├── .archive/                # Archived files
+├── .archive/                # Optional local archive scratch space (gitignored; removed when empty/stale)
 ├── README.md                # Project overview
 ├── AGENTS.md                # Dev guidelines
 ├── PROGRESS.md              # Progress tracking
@@ -88,4 +88,4 @@ PulseBoost/
 1. Review `.gitignore` and adjust if needed
 2. Consider moving `FULL_A_TO_Z_REVIEW.md` to `docs/`
 3. Archive old `implement.md` if no longer needed
-4. Clean up `pulseboost/run/*.log` files periodically
+4. Keep `pulseboost/run/*.log` files out of source control and clean them periodically

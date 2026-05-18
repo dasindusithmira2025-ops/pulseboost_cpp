@@ -112,6 +112,8 @@ export default function App() {
   const healthScore = useSystemStore((state) => state.healthScore);
   const metrics = useSystemStore((state) => state.metrics);
   const sessionMode = useSystemStore((state) => state.sessionMode);
+  const currentBottleneck = useSystemStore((state) => state.currentBottleneck);
+  const frametime = useSystemStore((state) => state.frametime);
   const activeSession = useSystemStore((state) => state.activeSession);
   const adaptiveState = useSystemStore((state) => state.adaptive);
   const optimizations = useSystemStore((state) => state.optimizations);
@@ -636,7 +638,7 @@ export default function App() {
   };
 
   const renderPage = () => {
-    if (activePage === "dashboard") return <DashboardPage activeSession={activeSession} connected={connected} healthScore={healthScore} metrics={metrics} processIntelligence={processIntelligence} setActivePage={setActivePage} trustCenter={trustCenter} visibleOptimizations={recommendationFeed} />;
+    if (activePage === "dashboard") return <DashboardPage activeSession={activeSession} connected={connected} currentBottleneck={currentBottleneck} frametime={frametime} healthScore={healthScore} metrics={metrics} processIntelligence={processIntelligence} setActivePage={setActivePage} trustCenter={trustCenter} visibleOptimizations={recommendationFeed} />;
     if (activePage === "pulsecore") return <PulseCorePage activeSession={activeSession} auditEntries={auditEntries} foundationStatus={foundationStatus} gpuStats={gpuStats} healthHistory={healthHistory} healthScore={healthScore} metrics={metrics} onBoostNow={runPulseBoostNow} onOpenProfile={() => setActivePage("profiles")} onSuggestionAction={handleSuggestionAction} requestApplyTweak={requestApplyTweak} requestRevertTweak={requestRevertTweak} requestRollbackAll={requestRollbackAll} sendChat={sendChat} sessionMode={sessionMode} smartSuggestions={smartSuggestions} tweakCatalog={tweakCatalog} />;
     if (activePage === "network") return <NetworkPage featureAccess={featureAccess} networkDiagnostics={networkDiagnostics} refreshNetworkDiagnostics={refreshNetworkData} requestApplyNetworkQos={requestApplyNetworkQos} />;
     if (activePage === "gpu") return <GpuPage biosChecklist={biosChecklist} featureAccess={featureAccess} gpuStats={gpuStats} requestApplyGpuSetting={requestApplyGpuSetting} />;

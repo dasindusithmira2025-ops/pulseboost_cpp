@@ -24,6 +24,7 @@ from core.cognition.suggestions import generate_smart_suggestions
 from core.cognition.thermal import ThermalIntelligence
 from core.cognition.waste_hunter import WasteHunter
 from core.entitlements import build_entitlement_snapshot, entitlement_access_map, legacy_plan_features
+from core.performance_diagnostics import BottleneckAnalyzer, FrameTimeCapture
 from core.tools.collector import MetricCollector
 from core.tools.session_detector import SessionDetector
 
@@ -49,6 +50,8 @@ class Orchestrator:
         self.efficiency_scorer = EfficiencyScorer()
         self.thermal = ThermalIntelligence()
         self.session_detector = SessionDetector()
+        self.frame_time_capture = FrameTimeCapture(self.settings.presentmon_csv_path)
+        self.bottleneck_analyzer = BottleneckAnalyzer()
         self.anomaly_detector = AnomalyDetector(self.memory, minimum_samples=self.settings.baseline_min_samples)
         self.waste_hunter = WasteHunter(self.memory)
         self.scheduler = IntelligentScheduler(self.memory)
@@ -60,6 +63,7 @@ class Orchestrator:
         self.session_manager = None
         self.account_service = None
         self.database = None
+        self.gpu_controller = None
         self.running = False
         self.cycle_count = 0
         self.last_snapshot = None
@@ -124,6 +128,23 @@ class Orchestrator:
         hour = time.localtime(snapshot.timestamp).tm_hour
         session = self.session_detector.detect(snapshot, hour)
         snapshot.session_mode = session.session_mode
+        gpu_stats = await self._gpu_stats()
+        if gpu_stats:
+            snapshot.gpu_percent = gpu_stats.get("utilization_percent")
+            snapshot.gpu_temp = gpu_stats.get("temperature_c")
+        frame_time = self.frame_time_capture.capture(
+            foreground_app=snapshot.foreground_app,
+            session_mode=session.session_mode,
+        )
+        bottleneck = self.bottleneck_analyzer.analyze(
+            snapshot=snapshot,
+            session_mode=session.session_mode,
+            frame_time=frame_time,
+            gpu_stats=gpu_stats,
+        )
+        snapshot.frametime = frame_time
+        snapshot.current_bottleneck = bottleneck["current_bottleneck"]
+        snapshot.bottleneck_details = bottleneck
 
         await self._update_baselines(snapshot, session.session_mode)
         anomalies = await self.anomaly_detector.analyze(snapshot, session.session_mode)
@@ -214,6 +235,9 @@ class Orchestrator:
             "auth": access_context["auth_status"],
             "baseline_status": baseline_status,
             "adaptive": adaptive_state,
+            "current_bottleneck": bottleneck["current_bottleneck"],
+            "bottleneck_details": bottleneck,
+            "frametime": frame_time,
             "history_window_seconds": timeline_window,
             "machine": {
                 "id": self.settings.machine_id,
@@ -510,6 +534,14 @@ class Orchestrator:
             timestamp=now_ts,
         )
         self._last_health_history_snapshot_at = now_ts
+
+    async def _gpu_stats(self) -> dict[str, Any]:
+        if self.gpu_controller is None:
+            return {}
+        try:
+            return await self.gpu_controller.stats()
+        except Exception:
+            return {}
 
     def _history_window_seconds(self, plan_name: str) -> int | None:
         features = features_for_plan(plan_name)

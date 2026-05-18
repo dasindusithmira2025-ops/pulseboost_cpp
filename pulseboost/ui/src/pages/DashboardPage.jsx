@@ -27,6 +27,8 @@ function trustReadiness(trustCenter) {
 export default function DashboardPage({
   activeSession,
   connected,
+  currentBottleneck,
+  frametime,
   healthScore = 92,
   metrics,
   trustCenter,
@@ -146,6 +148,12 @@ export default function DashboardPage({
             <div className="flex items-center gap-1.5 text-sm text-success">
               <ShieldCheckIcon className="h-3.5 w-3.5" />
               Recovery: {trustReadiness(trustCenter)}
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-sm text-txt-secondary">
+              <span className="numeric-tabular">Bottleneck: {currentBottleneck || metrics?.current_bottleneck || "Learning"}</span>
+              <span className="numeric-tabular">
+                Frame time: {frametime?.current_frame_time_ms ? `${Number(frametime.current_frame_time_ms).toFixed(2)} ms` : "Unavailable"}
+              </span>
             </div>
           </div>
         </div>

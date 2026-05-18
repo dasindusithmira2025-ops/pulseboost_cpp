@@ -1,4 +1,5 @@
-$root = Join-Path $PSScriptRoot "pulseboost"
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$root = Join-Path $repoRoot "pulseboost"
 $logDir = Join-Path $root "run"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 

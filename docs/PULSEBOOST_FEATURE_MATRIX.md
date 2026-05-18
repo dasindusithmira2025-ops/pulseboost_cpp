@@ -13,6 +13,7 @@ Status classes used:
 | Feature Area | Capability | Status | Backend/Core Evidence | API Surface | UI Surface | Notes |
 |---|---|---|---|---|---|---|
 | Dashboard | Live machine/session summary | Working | `core/agents/orchestrator.py`, `core/metrics.py` | `GET /api/status`, `GET /api/state`, `GET /api/metrics` | `DashboardPage.jsx` | Pulls real live state and trust posture. |
+| Dashboard | Live bottleneck diagnosis | Working (capability-limited) | `core/performance_diagnostics.py`, orchestrator metrics enrichment | `GET /api/metrics`, `GET /api/metrics/bottleneck`, `/api/metrics/live` | `DashboardPage.jsx` | Emits `CPU_BOUND`, `GPU_BOUND`, `RAM_BOUND`, `DISK_BOUND`, `NETWORK_BOUND`, `THERMAL_BOUND`, or `BACKGROUND_PROCESS_BOUND` with input evidence. |
 | Dashboard | Quick jump actions (Boost/Chat/Audit) | Working | App orchestration + optimization decision path | uses existing routes | `DashboardPage.jsx` | Launches existing flows, not placeholder buttons. |
 | PulseCore | Tweak catalog display | Working | `core/optimizer.py` | `GET /api/tweaks` | `PulseCorePage.jsx` | Includes applied state and active snapshot metadata. |
 | PulseCore | Apply tweak | Working | `core/optimizer.py`, `core/revert_manager.py` | `POST /api/tweaks/{id}/apply` | `PulseCorePage.jsx` | Audited and rollback-aware. |
@@ -25,7 +26,8 @@ Status classes used:
 | Benchmark | Run benchmark | Working | `core/benchmark_engine.py` | `POST /api/benchmark/run` | `BenchmarkPage.jsx` | Captures baseline/optimized windows and verdict. |
 | Benchmark | View benchmark history | Working (capability-limited) | DB benchmark tables | `GET /api/benchmark/results` | `BenchmarkPage.jsx` | Entitlement-gated (`benchmark_history`). |
 | Benchmark | Export benchmark markdown | Working (capability-limited) | route-generated markdown from result | `GET /api/benchmark/results/{id}/export` | `BenchmarkPage.jsx` | Entitlement-gated and id-dependent. |
-| Benchmark | FPS/1% low/frame-time evidence | Unsupported (runtime/hardware) | explicit unsupported reasons in benchmark engine | returned in benchmark payload | Benchmark verdict/details | Requires frame hook integration; currently honest unsupported. |
+| Metrics | Live frame-time ingestion | Working (capability-limited) | `core/performance_diagnostics.py` | `GET /api/metrics`, `/api/metrics/live` | Dashboard summary | Requires `PRESENTMON_CSV_PATH` pointing to a live PresentMon-compatible CSV; otherwise explicit unavailable. |
+| Benchmark | FPS/1% low/frame-time evidence | Unsupported (runtime/hardware) | explicit unsupported reasons in benchmark engine | returned in benchmark payload | Benchmark verdict/details | Benchmark engine still needs to consume the frame-time ingestion path for persisted FPS evidence. |
 | Adaptive Engine | Status and toggle | Working | `core/adaptive_engine.py` | `GET /api/adaptive/status`, `POST /api/adaptive/toggle` | Settings + status areas | Real state persisted and exposed. |
 | Network | Diagnostics overview | Working (capability-limited) | `core/network_optimizer.py` | `GET /api/network/diagnostics` | `NetworkPage.jsx` | Router and game-server probes may be unavailable. |
 | Network | QoS apply profile | Dry-run | network optimizer apply path | `POST /api/network/qos` | `NetworkPage.jsx` | Returns dry-run success when supported; no real policy writes yet. |
@@ -89,5 +91,5 @@ Status classes used:
 - Multi-device licensing enforcement beyond local cache
 
 ### Unsupported (runtime/hardware)
-- FPS/1% low/frame-time benchmark metrics without frame hook
+- FPS/1% low/frame-time benchmark metrics without a configured trusted frame-time source
 - Vendor telemetry/writer paths when required runtime tools are absent

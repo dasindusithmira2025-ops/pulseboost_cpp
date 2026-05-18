@@ -8,7 +8,9 @@
 ## Testing Scripts
 - `check_app.py` - Check application health
 - `check_root_page.py` - Verify root page loads
-- `serve_app.py` - Serve application for testing
+
+## App Entrypoints
+- `..\serve_app.py` - Root FastAPI/static entrypoint used by Electron and local preview
 
 ## Usage
 

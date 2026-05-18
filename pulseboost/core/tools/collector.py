@@ -4,6 +4,7 @@ PulseBoost metric collector.
 from __future__ import annotations
 
 import shutil
+import sys
 import time
 from dataclasses import asdict, dataclass
 from typing import Any
@@ -30,6 +31,12 @@ class MetricSnapshot:
     process_count: int = 0
     health_score: float = 100.0
     session_mode: str = "normal"
+    foreground_app: dict[str, Any] | None = None
+    gpu_percent: float | None = None
+    gpu_temp: float | None = None
+    frametime: dict[str, Any] | None = None
+    current_bottleneck: str | None = None
+    bottleneck_details: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -87,6 +94,7 @@ class MetricCollector:
             temperature=self._get_temperature(),
             top_processes=top_processes,
             process_count=process_count,
+            foreground_app=self._get_foreground_app(),
         )
         self._last_time = now
         return snapshot
@@ -146,3 +154,29 @@ class MetricCollector:
                 continue
         processes.sort(key=lambda item: (item["cpu_percent"], item["memory_percent"]), reverse=True)
         return processes[:limit], len(processes)
+
+    def _get_foreground_app(self) -> dict[str, Any] | None:
+        if not sys.platform.startswith("win"):
+            return None
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            user32 = ctypes.windll.user32
+            hwnd = user32.GetForegroundWindow()
+            if not hwnd:
+                return None
+            pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            title_length = user32.GetWindowTextLengthW(hwnd)
+            title_buffer = ctypes.create_unicode_buffer(title_length + 1)
+            user32.GetWindowTextW(hwnd, title_buffer, title_length + 1)
+            proc = psutil.Process(int(pid.value))
+            return {
+                "pid": int(pid.value),
+                "name": proc.name(),
+                "executable_path": proc.exe(),
+                "title": title_buffer.value,
+            }
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, OSError, AttributeError):
+            return None

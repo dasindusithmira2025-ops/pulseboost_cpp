@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     history_window_days_1m: int = Field(default=7, alias="HISTORY_WINDOW_DAYS_1M")
     history_window_days_5m: int = Field(default=30, alias="HISTORY_WINDOW_DAYS_5M")
     desktop_runtime: str = Field(default="electron", alias="DESKTOP_RUNTIME")
+    presentmon_csv_path: str = Field(default="", alias="PRESENTMON_CSV_PATH")
 
     model_config = SettingsConfigDict(
         env_file=".env",

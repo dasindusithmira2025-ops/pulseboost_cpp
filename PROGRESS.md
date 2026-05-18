@@ -956,6 +956,7 @@ Create benchmark/evidence system that proves whether tweaks help.
   - Updated backend runtime identity reporting so Trust Center, Settings, and shell surfaces can distinguish Electron from PyWebView honestly.
 - Files changed:
   - `pulseboost/config.py`
+  - `pulseboost/.env.example`
   - `pulseboost/api/main.py`
   - `pulseboost/core/capabilities.py`
   - `pulseboost/desktop_app.py`
@@ -1212,3 +1213,67 @@ Create benchmark/evidence system that proves whether tweaks help.
 - Risks/tradeoffs:
   - GitHub CLI is installed but not authenticated in this environment, so final remote push requires `gh auth login` or another valid Git credential.
   - The target GitHub repository may contain existing history; replacing it with this source tree should be treated as an intentional repository takeover/cleanup action.
+
+#### Repository Cleanup And Script Organization Pass
+- Summary:
+  - Removed the stale tracked duplicate `scripts/serve_app.py`; the root `serve_app.py` remains the single active FastAPI/static entrypoint used by Electron and local preview.
+  - Fixed `scripts/debug_app.ps1`, `scripts/debug_backend.ps1`, and `scripts/debug_frontend.ps1` so they resolve the repository root correctly from the `scripts/` directory.
+  - Updated script organization docs to point developers at the root app entrypoint instead of the removed duplicate.
+  - Removed ignored local clutter from the working tree: Python bytecode caches, old `.archive` probe files, and runtime log files.
+  - Intentionally kept dependency/runtime folders (`pulseboost/tools`, `pulseboost/ui/node_modules`, `pulseboost/ui/dist`) and SQLite runtime databases to preserve local runnability and app state.
+- Files changed:
+  - `PROJECT_ORGANIZATION.md`
+  - `PROGRESS.md`
+  - `scripts/README.md`
+  - `scripts/debug_app.ps1`
+  - `scripts/debug_backend.ps1`
+  - `scripts/debug_frontend.ps1`
+  - `scripts/serve_app.py` (removed)
+- Tests/checks run:
+  - PowerShell parser check for root and script launch helpers.
+  - `pulseboost\tools\python\python.exe -B -m unittest discover -s pulseboost\tests`
+  - `npm run desktop:check` (from `pulseboost/ui`)
+- Risks/tradeoffs:
+  - Runtime databases were not removed because they may contain local state and cognition memory.
+  - Dependency folders and built frontend output were not removed because deleting them would make the local app slower or impossible to run without reinstall/rebuild steps.
+
+#### Live Frame-Time And Bottleneck Diagnostics Pass
+- Summary:
+  - Added a real-time performance diagnostics module that classifies the current bottleneck into:
+    - `CPU_BOUND`
+    - `GPU_BOUND`
+    - `RAM_BOUND`
+    - `DISK_BOUND`
+    - `NETWORK_BOUND`
+    - `THERMAL_BOUND`
+    - `BACKGROUND_PROCESS_BOUND`
+  - Added foreground app capture on Windows through the foreground window PID and process metadata.
+  - Added live frame-time ingestion from a configured PresentMon-compatible CSV source via `PRESENTMON_CSV_PATH`.
+  - Kept unsupported frame-time behavior honest: without a trusted CSV source, FPS/frame-time fields return explicit unavailable status rather than fabricated values.
+  - Enriched orchestrator snapshots, `/api/metrics`, `/api/metrics/live`, and the new `/api/metrics/bottleneck` endpoint with bottleneck input evidence and output label.
+  - Surfaced the current bottleneck and current frame-time status on the Dashboard health panel.
+- Files changed:
+  - `pulseboost/config.py`
+  - `pulseboost/core/performance_diagnostics.py`
+  - `pulseboost/core/tools/collector.py`
+  - `pulseboost/core/agents/orchestrator.py`
+  - `pulseboost/core/metrics.py`
+  - `pulseboost/api/main.py`
+  - `pulseboost/api/routes.py`
+  - `pulseboost/tests/test_performance_diagnostics.py`
+  - `pulseboost/ui/src/App.jsx`
+  - `pulseboost/ui/src/store/useSystemStore.js`
+  - `pulseboost/ui/src/pages/DashboardPage.jsx`
+  - `docs/KNOWN_LIMITATIONS.md`
+  - `docs/PULSEBOOST_FEATURE_MATRIX.md`
+  - `docs/PULSEBOOST_TECHNICAL_ARCHITECTURE_CURRENT.md`
+  - `PROGRESS.md`
+- Tests/checks run:
+  - `tools\python\python.exe -B -m unittest tests.test_performance_diagnostics`
+  - `tools\python\python.exe -B -m unittest discover -s tests`
+  - `npm run build` (from `pulseboost/ui`)
+  - `npm run desktop:check` (from `pulseboost/ui`)
+- Risks/tradeoffs:
+  - Native hook/ETW capture is still not bundled; live frame-time values require a PresentMon-compatible CSV source configured by environment variable.
+  - GPU-bound confidence depends on vendor telemetry availability; when telemetry is unavailable, the classifier caps confidence and falls back to CPU/RAM/disk/network/process evidence.
+  - Network-bound detection is throughput-based until game-server latency/jitter evidence is wired into the same classifier.

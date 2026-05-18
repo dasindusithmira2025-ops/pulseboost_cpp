@@ -253,6 +253,7 @@ async def lifespan(app: FastAPI):
     adaptive_engine = AdaptiveEngine(database=database, audit_log=audit_log, optimizer=optimizer)
     await adaptive_engine.initialize()
     orchestrator.adaptive_engine = adaptive_engine
+    orchestrator.gpu_controller = gpu_controller
     game_profile_service = GameProfileService(
         database=database,
         optimizer=optimizer,

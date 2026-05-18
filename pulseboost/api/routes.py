@@ -167,6 +167,26 @@ async def metrics(request: Request) -> dict:
         "health_score": state.get("health_score"),
         "session_mode": state.get("session_mode"),
         "active_session": state.get("active_session"),
+        "current_bottleneck": state.get("current_bottleneck"),
+        "bottleneck_details": state.get("bottleneck_details"),
+        "frametime": state.get("frametime"),
+    }
+
+
+@router.get("/metrics/bottleneck")
+async def metrics_bottleneck(request: Request) -> dict:
+    state = request.app.state.orchestrator.current_state
+    details = state.get("bottleneck_details") or {}
+    return {
+        "input": details.get("inputs"),
+        "output": {
+            "current_bottleneck": details.get("current_bottleneck") or state.get("current_bottleneck"),
+        },
+        "confidence": details.get("confidence"),
+        "reason": details.get("reason"),
+        "frame_time": details.get("frame_time") or state.get("frametime"),
+        "scores": details.get("scores"),
+        "timestamp": details.get("timestamp"),
     }
 
 
