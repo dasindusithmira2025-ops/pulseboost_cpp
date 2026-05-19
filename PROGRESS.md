@@ -26,6 +26,49 @@
 
 ## Post-Phase Fixes
 
+### Benchmark Frame-Time Evidence Integration
+#### Status
+- Completed on 2026-05-20
+
+#### Notes
+- Wired `core/benchmark_engine.py` to reuse `FrameTimeCapture` for baseline and optimized benchmark windows instead of keeping FPS/frame-time persistence permanently unsupported.
+- Added persisted benchmark payload fields for:
+  - `frametime_supported`
+  - `frametime_source`
+  - `baseline_fps_average` / `optimized_fps_average`
+  - `baseline_fps_1_low` / `optimized_fps_1_low`
+  - `baseline_average_frame_time_ms` / `optimized_average_frame_time_ms`
+  - `baseline_p95_frame_time_ms` / `optimized_p95_frame_time_ms`
+  - `baseline_frame_time_variance_ms` / `optimized_frame_time_variance_ms`
+  - `fps_delta_percent`
+  - `p95_frame_time_delta_percent`
+  - `frame_time_reason`
+- Kept unsupported states explicit: without `PRESENTMON_CSV_PATH`, benchmark results still return unavailable frame-time fields plus the exact `FrameTimeCapture` reason.
+- Strengthened benchmark verdict scoring with frame-time evidence when available while preserving existing CPU/network/GPU evidence behavior.
+- Updated the Benchmark page to show average FPS, 1% low FPS, p95 frame-time, and the unavailable reason without redesigning the page.
+
+#### Files changed
+- `pulseboost/core/performance_diagnostics.py`
+- `pulseboost/core/models.py`
+- `pulseboost/core/benchmark_engine.py`
+- `pulseboost/api/routes.py`
+- `pulseboost/tests/test_phase5_benchmark.py`
+- `pulseboost/ui/src/pages/BenchmarkPage.jsx`
+- `docs/PULSEBOOST_FEATURE_MATRIX.md`
+- `docs/KNOWN_LIMITATIONS.md`
+- `docs/PULSEBOOST_TECHNICAL_ARCHITECTURE_CURRENT.md`
+- `PROGRESS.md`
+
+#### Validation and checks run
+- `pulseboost\tools\python\python.exe -m compileall pulseboost/api pulseboost/core pulseboost/tests`
+- `pulseboost\tools\python\python.exe -m unittest discover -s pulseboost\tests`
+- `cd pulseboost\ui && npm run build`
+- `cd pulseboost\ui && npm run desktop:check`
+
+#### Risks/tradeoffs
+- Benchmark frame-time persistence still depends on an external trusted PresentMon-compatible CSV feed; PulseBoost does not launch or manage PresentMon yet.
+- Window-bounded capture assumes the CSV source is being appended during the benchmark run; stale/non-appending files remain explicit unavailable evidence, not guessed values.
+
 ### Multi-Launcher Game Discovery Expansion (Epic/GOG/Xbox/Manual)
 #### Status
 - Completed on 2026-04-17

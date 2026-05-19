@@ -224,13 +224,15 @@ File:
 ### Current capture model
 - Baseline and optimized windows sampled over fixed duration
 - Captures CPU and optionally network/gpu where available
+- Reuses `FrameTimeCapture` against a trusted PresentMon-compatible CSV source to persist benchmark FPS, 1% low FPS, average frame-time, p95 frame-time, and frame-time variance evidence per window
 - Calculates deltas and verdict (`HELPED`, `REGRESSION`, `NO_MEASURABLE_IMPACT`, `UNSTABLE`)
 - Persists both run and result payloads
 
 ### Known evidence boundary
 - Live frame-time ingestion is supported through a configured PresentMon-compatible CSV source (`PRESENTMON_CSV_PATH`).
 - Without that trusted source, frame-time/FPS fields remain explicit unavailable values.
-- Benchmark persistence still reports FPS/1% low/frame-time as unsupported until it is wired to the live frame-time ingestion path.
+- Benchmark persistence now consumes that same live frame-time ingestion path when configured.
+- Without the source, persisted benchmark results keep the frame-time evidence fields unavailable and store the explicit `FrameTimeCapture` reason.
 
 ## 12.1 Live Bottleneck Diagnostics
 

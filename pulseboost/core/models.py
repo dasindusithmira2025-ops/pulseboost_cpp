@@ -89,7 +89,12 @@ class HardwareProfile(SerializableModel):
 class BenchmarkCapture(SerializableModel):
     avg_fps: float | None = None
     one_percent_low_fps: float | None = None
+    average_frame_time_ms: float | None = None
+    p95_frame_time_ms: float | None = None
     frame_time_variance_ms: float | None = None
+    frametime_supported: bool = False
+    frametime_source: str | None = None
+    frametime_reason: str | None = None
     cpu_percent: float | None = None
     gpu_percent: float | None = None
     ping_ms: float | None = None
@@ -109,6 +114,21 @@ class BenchmarkResult(SerializableModel):
     session_id: str | None = None
     baseline: dict[str, Any] = field(default_factory=dict)
     optimized: dict[str, Any] = field(default_factory=dict)
+    frametime_supported: bool = False
+    frametime_source: str | None = None
+    baseline_fps_average: float | None = None
+    optimized_fps_average: float | None = None
+    baseline_fps_1_low: float | None = None
+    optimized_fps_1_low: float | None = None
+    baseline_average_frame_time_ms: float | None = None
+    optimized_average_frame_time_ms: float | None = None
+    baseline_p95_frame_time_ms: float | None = None
+    optimized_p95_frame_time_ms: float | None = None
+    baseline_frame_time_variance_ms: float | None = None
+    optimized_frame_time_variance_ms: float | None = None
+    fps_delta_percent: float | None = None
+    p95_frame_time_delta_percent: float | None = None
+    frame_time_reason: str | None = None
     avg_fps_delta: float | None = None
     one_percent_low_delta: float | None = None
     frame_time_variance_delta: float | None = None

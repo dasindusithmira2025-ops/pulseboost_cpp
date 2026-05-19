@@ -45,14 +45,29 @@ class FrameTimeCapture:
         self.csv_path = Path(csv_path).expanduser() if csv_path else None
         self.max_rows = max_rows
 
-    def capture(self, *, foreground_app: dict[str, Any] | None, session_mode: str) -> dict[str, Any]:
+    def snapshot_marker(self) -> int:
+        if not self.csv_path or not self.csv_path.exists():
+            return 0
+        try:
+            with self.csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
+                return max(sum(1 for _ in handle) - 1, 0)
+        except (OSError, UnicodeDecodeError):
+            return 0
+
+    def capture(
+        self,
+        *,
+        foreground_app: dict[str, Any] | None,
+        session_mode: str,
+        since_marker: int | None = None,
+    ) -> dict[str, Any]:
         if not self.csv_path:
             return self._unsupported(
                 "Frame-time capture requires a PresentMon-compatible CSV source configured with PRESENTMON_CSV_PATH."
             )
         if not self.csv_path.exists():
             return self._unsupported(f"Configured frame-time CSV does not exist: {self.csv_path}")
-        samples = self._read_samples(foreground_app=foreground_app)
+        samples = self._read_samples(foreground_app=foreground_app, since_marker=since_marker)
         if not samples:
             return self._unsupported("No recent frame-time rows matched the foreground app in the configured CSV.")
         average_ms = statistics.fmean(samples)
@@ -77,12 +92,14 @@ class FrameTimeCapture:
             "timestamp": time.time(),
         }
 
-    def _read_samples(self, *, foreground_app: dict[str, Any] | None) -> list[float]:
+    def _read_samples(self, *, foreground_app: dict[str, Any] | None, since_marker: int | None = None) -> list[float]:
         try:
             with self.csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
                 rows = list(csv.DictReader(handle))
         except (OSError, csv.Error, UnicodeDecodeError):
             return []
+        if since_marker and since_marker > 0:
+            rows = rows[since_marker:]
         if len(rows) > self.max_rows:
             rows = rows[-self.max_rows :]
         target_pid = int(foreground_app.get("pid", 0)) if foreground_app else 0

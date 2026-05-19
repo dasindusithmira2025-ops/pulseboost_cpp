@@ -16,6 +16,10 @@ function captureValue(capture, key, suffix = "") {
   return value === null || value === undefined ? "Unavailable" : `${value}${suffix}`;
 }
 
+function metricValue(value, suffix = "") {
+  return value === null || value === undefined ? "Unavailable" : `${value}${suffix}`;
+}
+
 export default function BenchmarkPage({
   benchmarkDuration,
   benchmarkNotes,
@@ -213,6 +217,57 @@ export default function BenchmarkPage({
               </Card>
             ))}
           </div>
+
+          <Card className="p-5">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-txt-tertiary">
+              Frame-time evidence
+            </h3>
+            <div className="grid gap-4 md:grid-cols-3">
+              {[
+                {
+                  label: "FPS average",
+                  baseline: metricValue(latest.baseline_fps_average),
+                  optimized: metricValue(latest.optimized_fps_average),
+                  delta: deltaLabel(latest.fps_delta_percent, "%"),
+                },
+                {
+                  label: "1% low FPS",
+                  baseline: metricValue(latest.baseline_fps_1_low),
+                  optimized: metricValue(latest.optimized_fps_1_low),
+                  delta: deltaLabel(latest.one_percent_low_delta),
+                },
+                {
+                  label: "P95 frame time",
+                  baseline: metricValue(latest.baseline_p95_frame_time_ms, " ms"),
+                  optimized: metricValue(latest.optimized_p95_frame_time_ms, " ms"),
+                  delta: deltaLabel(latest.p95_frame_time_delta_percent, "%"),
+                },
+              ].map((metric) => (
+                <div key={metric.label} className="rounded-md bg-surface-sunken p-4">
+                  <div className="mb-2 text-[11px] text-txt-tertiary">{metric.label}</div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-txt-tertiary">Baseline</span>
+                      <span className="numeric-tabular text-txt-primary">{metric.baseline}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-txt-tertiary">Optimized</span>
+                      <span className="numeric-tabular text-txt-primary">{metric.optimized}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-txt-tertiary">Delta</span>
+                      <span className="numeric-tabular text-txt-primary">{metric.delta}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!latest.frametime_supported && latest.frame_time_reason ? (
+              <div className="mt-4 rounded-md border border-border-default bg-surface-sunken px-4 py-3 text-sm text-txt-tertiary">
+                Frame-time evidence unavailable: {latest.frame_time_reason}
+              </div>
+            ) : null}
+          </Card>
 
           <Card className="p-5">
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-txt-tertiary">

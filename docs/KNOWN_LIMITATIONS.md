@@ -8,7 +8,8 @@
 ## Benchmarking
 - Live FPS, 1% low FPS, and frame-time values are available only when `PRESENTMON_CSV_PATH` points to a live PresentMon-compatible CSV source.
 - Without that trusted frame-time source, frame capture reports an explicit unavailable state instead of fabricating FPS.
-- Benchmark FPS/1% low/frame-time evidence still requires integration with the same trusted frame-time source.
+- Benchmark now persists FPS / 1% low / frame-time evidence from that same trusted frame-time source when it is configured.
+- Without the source, benchmark results keep the frame-time fields unavailable and return the exact unavailable reason.
 - Benchmark evidence is strongest today on CPU and, when diagnostics succeed, network deltas.
 - GPU deltas only appear when supported telemetry is available on the current machine.
 

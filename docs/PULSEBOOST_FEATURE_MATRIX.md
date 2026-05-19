@@ -23,11 +23,11 @@ Status classes used:
 | Audit | Timeline/list view | Working | `core/audit_log.py`, DB audit tables | `GET /api/audit` | `AuditPage.jsx` | Shows before/after payload details. |
 | Audit | Revert from audit row | Working (capability-limited) | snapshot-linked revert via optimizer | `POST /api/audit/{id}/revert` | `AuditPage.jsx` | Only rows with revert snapshot can be reverted. |
 | Audit | Export audit CSV | Working (capability-limited) | orchestrator memory export | `GET /api/actions/export` | `AuditPage.jsx` | Entitlement-gated (`audit_export`). |
-| Benchmark | Run benchmark | Working | `core/benchmark_engine.py` | `POST /api/benchmark/run` | `BenchmarkPage.jsx` | Captures baseline/optimized windows and verdict. |
+| Benchmark | Run benchmark | Working | `core/benchmark_engine.py` | `POST /api/benchmark/run` | `BenchmarkPage.jsx` | Captures baseline/optimized windows and verdict, plus frame-time evidence when `PRESENTMON_CSV_PATH` is configured. |
 | Benchmark | View benchmark history | Working (capability-limited) | DB benchmark tables | `GET /api/benchmark/results` | `BenchmarkPage.jsx` | Entitlement-gated (`benchmark_history`). |
 | Benchmark | Export benchmark markdown | Working (capability-limited) | route-generated markdown from result | `GET /api/benchmark/results/{id}/export` | `BenchmarkPage.jsx` | Entitlement-gated and id-dependent. |
 | Metrics | Live frame-time ingestion | Working (capability-limited) | `core/performance_diagnostics.py` | `GET /api/metrics`, `/api/metrics/live` | Dashboard summary | Requires `PRESENTMON_CSV_PATH` pointing to a live PresentMon-compatible CSV; otherwise explicit unavailable. |
-| Benchmark | FPS/1% low/frame-time evidence | Unsupported (runtime/hardware) | explicit unsupported reasons in benchmark engine | returned in benchmark payload | Benchmark verdict/details | Benchmark engine still needs to consume the frame-time ingestion path for persisted FPS evidence. |
+| Benchmark | FPS/1% low/frame-time evidence | Working (capability-limited) | benchmark engine + `FrameTimeCapture` | returned in benchmark payload | Benchmark verdict/details | Persists real FPS / 1% low / frame-time evidence from the trusted CSV source when configured; otherwise returns explicit unavailable state and reason. |
 | Adaptive Engine | Status and toggle | Working | `core/adaptive_engine.py` | `GET /api/adaptive/status`, `POST /api/adaptive/toggle` | Settings + status areas | Real state persisted and exposed. |
 | Network | Diagnostics overview | Working (capability-limited) | `core/network_optimizer.py` | `GET /api/network/diagnostics` | `NetworkPage.jsx` | Router and game-server probes may be unavailable. |
 | Network | QoS apply profile | Dry-run | network optimizer apply path | `POST /api/network/qos` | `NetworkPage.jsx` | Returns dry-run success when supported; no real policy writes yet. |
@@ -91,5 +91,5 @@ Status classes used:
 - Multi-device licensing enforcement beyond local cache
 
 ### Unsupported (runtime/hardware)
-- FPS/1% low/frame-time benchmark metrics without a configured trusted frame-time source
+- Benchmark FPS/1% low/frame-time metrics without a configured trusted `PRESENTMON_CSV_PATH` source
 - Vendor telemetry/writer paths when required runtime tools are absent
