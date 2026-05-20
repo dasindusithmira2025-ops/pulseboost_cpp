@@ -22,6 +22,19 @@ class FoundationTests(unittest.TestCase):
             state = asyncio.run(database.get_app_state("test.key"))
             self.assertEqual(state["value"], 3)
 
+    def test_database_uses_wal_mode_for_concurrent_runtime_access(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database = DatabaseService(Path(temp_dir) / "foundation.db")
+            asyncio.run(database.initialize())
+
+            async def journal_mode() -> str:
+                async with database._connection() as db:
+                    cursor = await db.execute("PRAGMA journal_mode")
+                    row = await cursor.fetchone()
+                    return str(row[0]).lower()
+
+            self.assertEqual(asyncio.run(journal_mode()), "wal")
+
     def test_audit_and_revert_persist(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             database = DatabaseService(Path(temp_dir) / "foundation.db")

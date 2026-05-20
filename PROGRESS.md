@@ -26,6 +26,37 @@
 
 ## Post-Phase Fixes
 
+### SQLite Lock Contention Reduction During Benchmark Polling
+#### Status
+- Completed on 2026-05-20
+
+#### Notes
+- Reduced desktop runtime SQLite lock contention by configuring every `DatabaseService` connection for:
+  - `PRAGMA journal_mode = WAL`
+  - `PRAGMA synchronous = NORMAL`
+  - `PRAGMA busy_timeout = 15000`
+- Reduced unnecessary benchmark-page database traffic during an active benchmark run:
+  - the silent polling path now refreshes status only while `benchmark_running` is true
+  - benchmark/tweak/audit result polling resumes after the run completes
+- Synced the frontend `benchmarkRunning` state from `/api/status` so the UI respects backend run state instead of only local button state.
+
+#### Files changed
+- `pulseboost/core/db/service.py`
+- `pulseboost/ui/src/App.jsx`
+- `pulseboost/tests/test_foundation.py`
+- `PROGRESS.md`
+
+#### Validation and checks run
+- `pulseboost\tools\python\python.exe -m compileall pulseboost/core/db/service.py pulseboost/tests/test_foundation.py`
+- `pulseboost\tools\python\python.exe -m unittest discover -s pulseboost\tests -p test_foundation.py`
+- `pulseboost\tools\python\python.exe -m unittest discover -s pulseboost\tests -p test_phase5_benchmark.py`
+- `cd pulseboost\ui && npm run build`
+- `cd pulseboost\ui && npm run desktop:check`
+
+#### Risks/tradeoffs
+- WAL greatly reduces reader/writer contention, but a second external process holding the same database open incorrectly can still cause lock errors.
+- The benchmark page now delays some detail refreshes while a run is active to prioritize write stability over mid-run history/tweak/audit freshness.
+
 ### Benchmark Frame-Time Evidence Integration
 #### Status
 - Completed on 2026-05-20

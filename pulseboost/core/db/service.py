@@ -27,8 +27,7 @@ class DBPool:
 
     async def _create_connection(self) -> aiosqlite.Connection:
         connection = await aiosqlite.connect(self._path)
-        await connection.execute("PRAGMA foreign_keys = ON")
-        await connection.execute("PRAGMA busy_timeout = 5000")
+        await DatabaseService.configure_connection(connection)
         return connection
 
     async def acquire(self) -> aiosqlite.Connection:
@@ -89,9 +88,15 @@ class DatabaseService:
 
     async def _create_connection(self) -> aiosqlite.Connection:
         connection = await aiosqlite.connect(self.db_path)
-        await connection.execute("PRAGMA foreign_keys = ON")
-        await connection.execute("PRAGMA busy_timeout = 5000")
+        await self.configure_connection(connection)
         return connection
+
+    @staticmethod
+    async def configure_connection(connection: aiosqlite.Connection) -> None:
+        await connection.execute("PRAGMA journal_mode = WAL")
+        await connection.execute("PRAGMA synchronous = NORMAL")
+        await connection.execute("PRAGMA foreign_keys = ON")
+        await connection.execute("PRAGMA busy_timeout = 15000")
 
     @asynccontextmanager
     async def _connection(self):

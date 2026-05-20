@@ -170,6 +170,7 @@ export default function App() {
     const [status, trust] = await Promise.all([fetchStatus(), fetchTrustCenterStatus()]);
     setFoundationStatus(status);
     setTrustCenter(trust);
+    setBenchmarkRunning(Boolean(status?.benchmark_running));
   };
   const refreshTweakData = async () => {
     const tweaks = await fetchTweakCatalog();
@@ -206,6 +207,10 @@ export default function App() {
   const loadActivePageData = async (page = activePage, silent = false) => {
     if (!silent) setPageLoading(true);
     try {
+      if (page === "benchmark" && silent && benchmarkRunning) {
+        await refreshStatus();
+        return;
+      }
       if (["dashboard", "pulsecore", "benchmark"].includes(page)) await refreshTweakData();
       if (["dashboard", "audit"].includes(page)) await refreshAuditData();
       if (page === "pulsecore") await Promise.all([refreshHealthHistory(), refreshSuggestions()]);
@@ -227,7 +232,7 @@ export default function App() {
     const intervalMs = activePage === "dashboard" ? 12000 : activePage === "pulsecore" ? 5000 : 15000;
     const interval = window.setInterval(() => loadActivePageData(activePage, true).catch((error) => setErrorMessage(error.message)), intervalMs);
     return () => window.clearInterval(interval);
-  }, [activePage, selectedGameId]);
+  }, [activePage, selectedGameId, benchmarkRunning]);
   useEffect(() => {
     let active = true;
     const desktopApi = window.pulseboostDesktop;
