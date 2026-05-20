@@ -26,6 +26,45 @@
 
 ## Post-Phase Fixes
 
+### PresentMon Manual Testing Workflow
+#### Status
+- Completed on 2026-05-21
+
+#### Notes
+- Added manual-test helper scripts for real PresentMon CSV workflows without changing app configuration permanently:
+  - `scripts\run_with_presentmon_csv.ps1`
+  - `scripts\check_presentmon_csv.ps1`
+- Kept the workflow honest and process-scoped:
+  - no fake CSV generation
+  - no `.env` mutation
+  - no hardcoded personal paths in application code
+- Added `docs/PRESENTMON_MANUAL_TESTING.md` covering:
+  - what `PRESENTMON_CSV_PATH` does
+  - how to create a separate output folder
+  - how to run PresentMon separately against a real game/process
+  - how to inspect a real CSV before launching PulseBoost
+  - how to launch PulseBoost with a process-scoped `PRESENTMON_CSV_PATH`
+  - expected working/non-working UI behavior and troubleshooting
+- Added a concise README link to the new manual testing guide.
+
+#### Files changed
+- `scripts/run_with_presentmon_csv.ps1`
+- `scripts/check_presentmon_csv.ps1`
+- `docs/PRESENTMON_MANUAL_TESTING.md`
+- `README.md`
+- `PROGRESS.md`
+
+#### Validation and checks run
+- PowerShell parser syntax checks for both helper scripts
+- `pulseboost\tools\python\python.exe -m compileall pulseboost/api pulseboost/core pulseboost/tests`
+- `pulseboost\tools\python\python.exe -m unittest discover -s pulseboost\tests`
+- `cd pulseboost\ui && npm run build`
+- `cd pulseboost\ui && npm run desktop:check`
+
+#### Risks/tradeoffs
+- PulseBoost still depends on an externally managed PresentMon-compatible CSV source; these helpers improve manual setup only.
+- `check_presentmon_csv.ps1` is intentionally a lightweight file sanity check and does not attempt to infer or validate benchmark results.
+
 ### Benchmark Frame-Time Evidence Review Fixes
 #### Status
 - Completed on 2026-05-21

@@ -74,6 +74,7 @@ When portable runtimes are not present, run the same checks with system `python`
 - [Product specification](docs/PULSEBOOST_SPEC.md)
 - [Current architecture](docs/PULSEBOOST_TECHNICAL_ARCHITECTURE_CURRENT.md)
 - [API reference](docs/PULSEBOOST_API_REFERENCE.md)
+- [PresentMon manual testing](docs/PRESENTMON_MANUAL_TESTING.md)
 - [Feature matrix](docs/PULSEBOOST_FEATURE_MATRIX.md)
 - [Known limitations](docs/KNOWN_LIMITATIONS.md)
 - [Production readiness](docs/PRODUCTION_READINESS.md)
