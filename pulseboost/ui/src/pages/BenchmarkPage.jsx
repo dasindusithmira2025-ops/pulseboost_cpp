@@ -20,6 +20,26 @@ function metricValue(value, suffix = "") {
   return value === null || value === undefined ? "Unavailable" : `${value}${suffix}`;
 }
 
+function normalizeBenchmarkResult(result) {
+  if (!result) return null;
+  const baseline = result.baseline || {};
+  const optimized = result.optimized || {};
+  return {
+    ...result,
+    baseline,
+    optimized,
+    frametime_supported: Boolean(result.frametime_supported),
+    frametime_source: result.frametime_source ?? baseline.frametime_source ?? optimized.frametime_source ?? null,
+    baseline_fps_average: result.baseline_fps_average ?? baseline.avg_fps ?? null,
+    optimized_fps_average: result.optimized_fps_average ?? optimized.avg_fps ?? null,
+    baseline_fps_1_low: result.baseline_fps_1_low ?? baseline.one_percent_low_fps ?? null,
+    optimized_fps_1_low: result.optimized_fps_1_low ?? optimized.one_percent_low_fps ?? null,
+    baseline_p95_frame_time_ms: result.baseline_p95_frame_time_ms ?? baseline.p95_frame_time_ms ?? null,
+    optimized_p95_frame_time_ms: result.optimized_p95_frame_time_ms ?? optimized.p95_frame_time_ms ?? null,
+    frame_time_reason: result.frame_time_reason ?? baseline.frametime_reason ?? optimized.frametime_reason ?? null,
+  };
+}
+
 export default function BenchmarkPage({
   benchmarkDuration,
   benchmarkNotes,
@@ -38,15 +58,22 @@ export default function BenchmarkPage({
   toggleBenchmarkTweak,
 }) {
   const [activeTab, setActiveTab] = useState("latest");
-  const latest = selectedBenchmark || benchmarkResults?.[0] || null;
+  const safeBenchmarkResults = useMemo(
+    () => (benchmarkResults || []).map((item) => normalizeBenchmarkResult(item)).filter(Boolean),
+    [benchmarkResults],
+  );
+  const latest = useMemo(
+    () => normalizeBenchmarkResult(selectedBenchmark || safeBenchmarkResults[0] || null),
+    [selectedBenchmark, safeBenchmarkResults],
+  );
 
   const verdictHistory = useMemo(
-    () => (benchmarkResults || []).map((item) => ({
+    () => safeBenchmarkResults.map((item) => ({
       benchmark_id: item.benchmark_id,
       verdict: item.verdict,
       created_at: item.created_at,
     })),
-    [benchmarkResults],
+    [safeBenchmarkResults],
   );
 
   const tweakChoices = (selectedTweakCatalog || []).map((item) => ({
@@ -135,7 +162,7 @@ export default function BenchmarkPage({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <StatusBadge status={latest.verdict || "MONITORED"} />
+                <StatusBadge status={latest.verdict || "NO_MEASURABLE_IMPACT"} />
                 <button
                   type="button"
                   onClick={() => onExportBenchmark?.(latest.benchmark_id)}
@@ -313,7 +340,7 @@ export default function BenchmarkPage({
                 </tr>
               </thead>
               <tbody>
-                {(benchmarkResults || []).map((result) => (
+                {safeBenchmarkResults.map((result) => (
                   <tr
                     key={result.benchmark_id}
                     className="cursor-pointer border-t border-border-subtle transition-colors hover:bg-surface-hover"
@@ -326,7 +353,7 @@ export default function BenchmarkPage({
                       {formatDateTime(result.created_at)}
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={result.verdict || "MONITORED"} />
+                      <StatusBadge status={result.verdict || "NO_MEASURABLE_IMPACT"} />
                     </td>
                     <td className="numeric-tabular px-4 py-3 text-sm text-txt-tertiary">
                       {result.tweak_set?.length || 0}

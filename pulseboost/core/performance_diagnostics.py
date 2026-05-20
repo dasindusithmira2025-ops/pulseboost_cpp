@@ -67,7 +67,14 @@ class FrameTimeCapture:
             )
         if not self.csv_path.exists():
             return self._unsupported(f"Configured frame-time CSV does not exist: {self.csv_path}")
-        samples = self._read_samples(foreground_app=foreground_app, since_marker=since_marker)
+        rows = self._read_rows()
+        if rows is None:
+            return self._unsupported(f"PulseBoost could not read the configured frame-time CSV: {self.csv_path}")
+        if not rows:
+            return self._unsupported("The configured frame-time CSV is empty and did not contain any sample rows.")
+        if since_marker and since_marker > 0 and len(rows) <= since_marker:
+            return self._unsupported("The configured frame-time CSV did not receive fresh rows during the benchmark window.")
+        samples = self._read_samples(rows=rows, foreground_app=foreground_app, since_marker=since_marker)
         if not samples:
             return self._unsupported("No recent frame-time rows matched the foreground app in the configured CSV.")
         average_ms = statistics.fmean(samples)
@@ -84,7 +91,7 @@ class FrameTimeCapture:
             "sample_count": len(samples),
             "current_frame_time_ms": round(samples[-1], 2),
             "average_frame_time_ms": round(average_ms, 2),
-            "p95_frame_time_ms": round(p95_ms, 2),
+            "p95_frame_time_ms": round(p95_ms, 2) if p95_ms is not None else None,
             "frame_time_variance_ms": round(statistics.pvariance(samples), 2) if len(samples) > 1 else 0.0,
             "fps_average": round(fps_average, 1) if fps_average is not None else None,
             "fps_1_low": round(fps_1_low, 1) if fps_1_low is not None else None,
@@ -92,12 +99,20 @@ class FrameTimeCapture:
             "timestamp": time.time(),
         }
 
-    def _read_samples(self, *, foreground_app: dict[str, Any] | None, since_marker: int | None = None) -> list[float]:
+    def _read_rows(self) -> list[dict[str, str]] | None:
         try:
             with self.csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
-                rows = list(csv.DictReader(handle))
+                return list(csv.DictReader(handle))
         except (OSError, csv.Error, UnicodeDecodeError):
-            return []
+            return None
+
+    def _read_samples(
+        self,
+        *,
+        rows: list[dict[str, str]],
+        foreground_app: dict[str, Any] | None,
+        since_marker: int | None = None,
+    ) -> list[float]:
         if since_marker and since_marker > 0:
             rows = rows[since_marker:]
         if len(rows) > self.max_rows:
@@ -160,9 +175,9 @@ class FrameTimeCapture:
         }
 
     @staticmethod
-    def _percentile(values: list[float], percentile: float) -> float:
+    def _percentile(values: list[float], percentile: float) -> float | None:
         if not values:
-            return 0.0
+            return None
         ordered = sorted(values)
         index = (len(ordered) - 1) * (percentile / 100.0)
         lower = math.floor(index)

@@ -26,6 +26,94 @@
 
 ## Post-Phase Fixes
 
+### Benchmark Frame-Time Evidence Review Fixes
+#### Status
+- Completed on 2026-05-21
+
+#### Notes
+- Patched benchmark export and comparison data to use real RAM evidence instead of referencing a missing `ram_delta` field:
+  - benchmark capture windows now record `ram_percent`
+  - benchmark results now persist `ram_delta`
+  - export output and existing comparison UI now read real RAM values
+- Fixed frame-time percentile safety:
+  - empty percentile input now returns `None` instead of fabricated `0.0`
+  - callers now preserve unsupported/unavailable states instead of implying `0 ms`
+- Extended benchmark evidence coverage for review blockers:
+  - unrecognized PresentMon-style CSV columns now fail gracefully as unsupported
+  - zero-baseline percent deltas remain `None`
+  - CPU-only evidence still produces a verdict when frame-time evidence is unavailable
+- Cleaned up benchmark evidence internals:
+  - simplified duplicate frame-time unavailable-reason filtering behind a small helper
+  - changed Benchmark page badge fallbacks from `MONITORED` to `NO_MEASURABLE_IMPACT`
+  - removed trailing blank lines at EOF in `core/benchmark_engine.py`
+  - documented that benchmark frame-time settings are intentionally read at engine construction time
+
+#### Files changed
+- `pulseboost/core/benchmark_engine.py`
+- `pulseboost/core/models.py`
+- `pulseboost/core/performance_diagnostics.py`
+- `pulseboost/tests/test_performance_diagnostics.py`
+- `pulseboost/tests/test_phase5_benchmark.py`
+- `pulseboost/ui/src/pages/BenchmarkPage.jsx`
+- `PROGRESS.md`
+
+#### Validation and checks run
+- `pulseboost\tools\python\python.exe -m compileall pulseboost/api pulseboost/core pulseboost/tests`
+- `pulseboost\tools\python\python.exe -m unittest discover -s pulseboost\tests`
+- `cd pulseboost\ui && npm run build`
+- `cd pulseboost\ui && npm run desktop:check`
+
+#### Risks/tradeoffs
+- Frame-time evidence still depends on an external trusted PresentMon-compatible CSV source configured by `PRESENTMON_CSV_PATH`.
+- RAM benchmark evidence is sampled once per benchmark second to stay consistent with the current benchmark window design; it is not a high-frequency memory trace.
+
+### Benchmark Frame-Time Evidence Hardening
+#### Status
+- Completed on 2026-05-20
+
+#### Notes
+- Hardened benchmark result serialization and legacy compatibility:
+  - Added centralized benchmark payload normalization so old benchmark JSON without the newer frame-time fields is returned with safe defaults instead of missing keys.
+  - Kept frontend rendering backward-compatible by normalizing legacy benchmark records before the Benchmark page reads frame-time metrics.
+- Tightened benchmark evidence trust rules in `core/benchmark_engine.py`:
+  - Added a minimum matched frame-sample requirement before frame-time evidence can influence verdicts.
+  - Added a 3% noise floor for average FPS and p95 frame-time deltas so tiny changes do not produce `HELPED` or `REGRESSION`.
+  - Preserved the correct interpretation that lower p95 frame-time is better.
+  - Marked frame-time evidence as unstable when matched sample count is too low or frame-time variance is unusually high.
+- Improved PresentMon-compatible CSV handling:
+  - empty CSV files now return an explicit unavailable reason
+  - stale CSVs with no fresh rows during the benchmark window now return an explicit unavailable reason
+- Expanded tests to cover:
+  - legacy benchmark payloads without frame-time fields
+  - missing `PRESENTMON_CSV_PATH`
+  - empty CSV
+  - stale CSV
+  - too few frame samples
+  - tiny FPS improvements under 3%
+  - tiny p95 frame-time improvements under 3%
+  - real FPS improvement with lower p95 frame-time
+  - FPS regression with higher p95 frame-time
+
+#### Files changed
+- `pulseboost/core/models.py`
+- `pulseboost/core/performance_diagnostics.py`
+- `pulseboost/core/benchmark_engine.py`
+- `pulseboost/core/db/service.py`
+- `pulseboost/tests/test_performance_diagnostics.py`
+- `pulseboost/tests/test_phase5_benchmark.py`
+- `pulseboost/ui/src/pages/BenchmarkPage.jsx`
+- `PROGRESS.md`
+
+#### Validation and checks run
+- `pulseboost\tools\python\python.exe -m compileall pulseboost/api pulseboost/core pulseboost/tests`
+- `pulseboost\tools\python\python.exe -m unittest discover -s pulseboost\tests`
+- `cd pulseboost\ui && npm run build`
+- `cd pulseboost\ui && npm run desktop:check`
+
+#### Risks/tradeoffs
+- Frame-time evidence still depends on an external trusted PresentMon-compatible CSV feed; PulseBoost still does not launch or manage PresentMon.
+- The current instability threshold for unusually high frame-time variance is heuristic and conservative; it is intentionally biased toward trust over aggressive verdicts.
+
 ### SQLite Lock Contention Reduction During Benchmark Polling
 #### Status
 - Completed on 2026-05-20

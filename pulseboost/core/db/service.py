@@ -12,7 +12,15 @@ from typing import Any
 import aiosqlite
 
 from core.db.migrations import ensure_database_schema
-from core.models import AuditEntry, BenchmarkResult, CapabilitySnapshot, HardwareProfile, RevertSnapshot, SessionRecord
+from core.models import (
+    AuditEntry,
+    BenchmarkResult,
+    CapabilitySnapshot,
+    HardwareProfile,
+    RevertSnapshot,
+    SessionRecord,
+    normalize_benchmark_result_payload,
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -773,7 +781,7 @@ class DatabaseService:
             await db.commit()
 
     async def insert_benchmark_result(self, result: BenchmarkResult) -> None:
-        payload = result.to_dict()
+        payload = normalize_benchmark_result_payload(result.to_dict())
         unsupported = payload.get("unsupported_reasons") or []
         async with self._connection() as db:
             await db.execute(
@@ -834,7 +842,7 @@ class DatabaseService:
                 (limit,),
             )
             rows = await cursor.fetchall()
-        return [json.loads(row[0]) for row in rows if row[0]]
+        return [normalize_benchmark_result_payload(json.loads(row[0])) for row in rows if row[0]]
 
     async def get_benchmark_result(self, benchmark_id: str) -> dict[str, Any] | None:
         async with self._connection() as db:
@@ -843,7 +851,7 @@ class DatabaseService:
                 (benchmark_id,),
             )
             row = await cursor.fetchone()
-        return json.loads(row[0]) if row and row[0] else None
+        return normalize_benchmark_result_payload(json.loads(row[0])) if row and row[0] else None
 
     async def clear_benchmark_history(self) -> dict[str, int]:
         async with self._connection() as db:

@@ -37,6 +37,62 @@ class FrameTimeCaptureTests(unittest.TestCase):
         self.assertEqual(result["status"], "unavailable")
         self.assertIn("PRESENTMON_CSV_PATH", result["reason"])
 
+    def test_reports_unavailable_for_empty_csv(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "presentmon-empty.csv"
+            path.write_text("Application,ProcessID,msBetweenPresents\n", encoding="utf-8")
+            capture = FrameTimeCapture(path)
+
+            result = capture.capture(
+                foreground_app={"pid": 42, "name": "game.exe"},
+                session_mode="benchmark",
+            )
+
+            self.assertFalse(result["supported"])
+            self.assertIn("empty", result["reason"].lower())
+
+    def test_reports_unavailable_for_stale_csv_marker(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "presentmon-stale.csv"
+            path.write_text(
+                "Application,ProcessID,msBetweenPresents\n"
+                "game.exe,42,16.6\n"
+                "game.exe,42,16.7\n",
+                encoding="utf-8",
+            )
+            capture = FrameTimeCapture(path)
+            marker = capture.snapshot_marker()
+
+            result = capture.capture(
+                foreground_app={"pid": 42, "name": "game.exe"},
+                session_mode="benchmark",
+                since_marker=marker,
+            )
+
+            self.assertFalse(result["supported"])
+            self.assertIn("did not receive fresh rows", result["reason"])
+
+    def test_reports_unavailable_for_unrecognized_frame_time_columns(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "presentmon-unknown-columns.csv"
+            path.write_text(
+                "Application,ProcessID,UnknownMetric\n"
+                "game.exe,42,16.6\n",
+                encoding="utf-8",
+            )
+            capture = FrameTimeCapture(path)
+
+            result = capture.capture(
+                foreground_app={"pid": 42, "name": "game.exe"},
+                session_mode="benchmark",
+            )
+
+            self.assertFalse(result["supported"])
+            self.assertIn("No recent frame-time rows matched", result["reason"])
+
+    def test_percentile_returns_none_for_empty_values(self):
+        self.assertIsNone(FrameTimeCapture._percentile([], 95))
+
 
 class BottleneckAnalyzerTests(unittest.TestCase):
     def test_detects_gpu_bound_when_gpu_utilization_dominates(self):

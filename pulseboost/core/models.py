@@ -9,6 +9,112 @@ class SerializableModel:
         return asdict(self)
 
 
+def _coalesce(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _percent_delta(updated: float | None, baseline: float | None) -> float | None:
+    if updated is None or baseline in (None, 0):
+        return None
+    return round(((updated - baseline) / baseline) * 100.0, 2)
+
+
+def normalize_benchmark_capture_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
+    raw = dict(payload or {})
+    return {
+        "avg_fps": raw.get("avg_fps"),
+        "one_percent_low_fps": raw.get("one_percent_low_fps"),
+        "average_frame_time_ms": raw.get("average_frame_time_ms"),
+        "p95_frame_time_ms": raw.get("p95_frame_time_ms"),
+        "frame_time_variance_ms": raw.get("frame_time_variance_ms"),
+        "frametime_supported": bool(raw.get("frametime_supported", False)),
+        "frametime_source": raw.get("frametime_source"),
+        "frametime_reason": raw.get("frametime_reason"),
+        "cpu_percent": raw.get("cpu_percent"),
+        "ram_percent": raw.get("ram_percent"),
+        "gpu_percent": raw.get("gpu_percent"),
+        "ping_ms": raw.get("ping_ms"),
+        "jitter_ms": raw.get("jitter_ms"),
+        "sample_count": _safe_int(raw.get("sample_count"), 0),
+        "frame_sample_count": _safe_int(raw.get("frame_sample_count"), 0),
+        "unstable": bool(raw.get("unstable", False)),
+        "unsupported_reasons": list(raw.get("unsupported_reasons") or []),
+    }
+
+
+def normalize_benchmark_result_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
+    raw = dict(payload or {})
+    baseline = normalize_benchmark_capture_payload(raw.get("baseline"))
+    optimized = normalize_benchmark_capture_payload(raw.get("optimized"))
+    frametime_supported = bool(
+        raw.get("frametime_supported", baseline["frametime_supported"] and optimized["frametime_supported"])
+    )
+    normalized = {
+        "benchmark_id": raw.get("benchmark_id"),
+        "workload_name": raw.get("workload_name"),
+        "created_at": raw.get("created_at"),
+        "duration_seconds": _safe_int(raw.get("duration_seconds"), 0),
+        "tweak_set": list(raw.get("tweak_set") or []),
+        "session_id": raw.get("session_id"),
+        "baseline": baseline,
+        "optimized": optimized,
+        "frametime_supported": frametime_supported,
+        "frametime_source": _coalesce(raw.get("frametime_source"), baseline["frametime_source"], optimized["frametime_source"]),
+        "baseline_fps_average": _coalesce(raw.get("baseline_fps_average"), baseline["avg_fps"]),
+        "optimized_fps_average": _coalesce(raw.get("optimized_fps_average"), optimized["avg_fps"]),
+        "baseline_fps_1_low": _coalesce(raw.get("baseline_fps_1_low"), baseline["one_percent_low_fps"]),
+        "optimized_fps_1_low": _coalesce(raw.get("optimized_fps_1_low"), optimized["one_percent_low_fps"]),
+        "baseline_average_frame_time_ms": _coalesce(raw.get("baseline_average_frame_time_ms"), baseline["average_frame_time_ms"]),
+        "optimized_average_frame_time_ms": _coalesce(raw.get("optimized_average_frame_time_ms"), optimized["average_frame_time_ms"]),
+        "baseline_p95_frame_time_ms": _coalesce(raw.get("baseline_p95_frame_time_ms"), baseline["p95_frame_time_ms"]),
+        "optimized_p95_frame_time_ms": _coalesce(raw.get("optimized_p95_frame_time_ms"), optimized["p95_frame_time_ms"]),
+        "baseline_frame_time_variance_ms": _coalesce(raw.get("baseline_frame_time_variance_ms"), baseline["frame_time_variance_ms"]),
+        "optimized_frame_time_variance_ms": _coalesce(raw.get("optimized_frame_time_variance_ms"), optimized["frame_time_variance_ms"]),
+        "fps_delta_percent": raw.get("fps_delta_percent"),
+        "p95_frame_time_delta_percent": raw.get("p95_frame_time_delta_percent"),
+        "baseline_frame_sample_count": _safe_int(_coalesce(raw.get("baseline_frame_sample_count"), baseline["frame_sample_count"]), 0),
+        "optimized_frame_sample_count": _safe_int(_coalesce(raw.get("optimized_frame_sample_count"), optimized["frame_sample_count"]), 0),
+        "frame_time_reason": _coalesce(raw.get("frame_time_reason"), baseline["frametime_reason"], optimized["frametime_reason"]),
+        "frame_time_evidence_unstable": bool(raw.get("frame_time_evidence_unstable", False)),
+        "frame_time_evidence_reason": raw.get("frame_time_evidence_reason"),
+        "avg_fps_delta": raw.get("avg_fps_delta"),
+        "one_percent_low_delta": raw.get("one_percent_low_delta"),
+        "frame_time_variance_delta": raw.get("frame_time_variance_delta"),
+        "cpu_delta": raw.get("cpu_delta"),
+        "ram_delta": raw.get("ram_delta"),
+        "gpu_delta": raw.get("gpu_delta"),
+        "ping_delta": raw.get("ping_delta"),
+        "jitter_delta": raw.get("jitter_delta"),
+        "notes": raw.get("notes", ""),
+        "verdict": raw.get("verdict", "NO_MEASURABLE_IMPACT"),
+        "supported_metrics": dict(raw.get("supported_metrics") or {}),
+        "unsupported_reasons": list(raw.get("unsupported_reasons") or []),
+        "apply_results": list(raw.get("apply_results") or []),
+        "revert_results": list(raw.get("revert_results") or []),
+    }
+    if normalized["fps_delta_percent"] is None:
+        normalized["fps_delta_percent"] = _percent_delta(
+            normalized["optimized_fps_average"],
+            normalized["baseline_fps_average"],
+        )
+    if normalized["p95_frame_time_delta_percent"] is None:
+        normalized["p95_frame_time_delta_percent"] = _percent_delta(
+            normalized["optimized_p95_frame_time_ms"],
+            normalized["baseline_p95_frame_time_ms"],
+        )
+    return normalized
+
+
 @dataclass(slots=True)
 class TweakObject(SerializableModel):
     id: str
@@ -96,10 +202,12 @@ class BenchmarkCapture(SerializableModel):
     frametime_source: str | None = None
     frametime_reason: str | None = None
     cpu_percent: float | None = None
+    ram_percent: float | None = None
     gpu_percent: float | None = None
     ping_ms: float | None = None
     jitter_ms: float | None = None
     sample_count: int = 0
+    frame_sample_count: int = 0
     unstable: bool = False
     unsupported_reasons: list[str] = field(default_factory=list)
 
@@ -128,11 +236,16 @@ class BenchmarkResult(SerializableModel):
     optimized_frame_time_variance_ms: float | None = None
     fps_delta_percent: float | None = None
     p95_frame_time_delta_percent: float | None = None
+    baseline_frame_sample_count: int = 0
+    optimized_frame_sample_count: int = 0
     frame_time_reason: str | None = None
+    frame_time_evidence_unstable: bool = False
+    frame_time_evidence_reason: str | None = None
     avg_fps_delta: float | None = None
     one_percent_low_delta: float | None = None
     frame_time_variance_delta: float | None = None
     cpu_delta: float | None = None
+    ram_delta: float | None = None
     gpu_delta: float | None = None
     ping_delta: float | None = None
     jitter_delta: float | None = None
